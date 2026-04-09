@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мультиплеер 2D (исправленный)</title>
+    <title>2D Multiplayer Sandbox</title>
     <style>
         body {
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
             background: #1a1e2c;
             display: flex;
             justify-content: center;
@@ -35,7 +35,14 @@
             margin: 15px 0;
             outline: 1px solid #3e4a6b;
         }
-        #nickname-input:focus { outline: 2px solid #6c9eff; }
+        #color-picker {
+            margin: 10px 0;
+        }
+        #color-picker label {
+            display: block;
+            margin-bottom: 5px;
+            color: #b0bbd5;
+        }
         #join-btn {
             padding: 10px 24px;
             font-size: 16px;
@@ -46,6 +53,7 @@
             border-radius: 6px;
             cursor: pointer;
             transition: 0.2s;
+            margin-top: 10px;
         }
         #join-btn:hover { background: #5a8af0; }
         #error-message { color: #ff7b7b; margin-top: 12px; min-height: 20px; }
@@ -53,15 +61,12 @@
         canvas {
             border: 3px solid #3e4a6b;
             border-radius: 8px;
-            background: #4a6741;
-            background-image: 
-                linear-gradient(rgba(60, 80, 50, 0.3) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(60, 80, 50, 0.3) 1px, transparent 1px);
-            background-size: 40px 40px;
+            background: #6a8e5a;
             display: block;
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            cursor: crosshair;
         }
-        #player-list {
+        #ui-overlay {
             position: absolute;
             top: 15px;
             right: 15px;
@@ -74,10 +79,10 @@
             max-height: 220px;
             overflow-y: auto;
             border: 1px solid #4a5a7a;
+            pointer-events: none;
         }
         #player-list h3 { margin: 0 0 8px 0; color: #6c9eff; font-size: 16px; }
         #player-list ul { margin: 0; padding-left: 18px; }
-        #player-list li { margin: 4px 0; }
         #ping-info {
             position: absolute;
             bottom: 15px;
@@ -87,91 +92,111 @@
             padding: 5px 12px;
             border-radius: 20px;
             font-size: 13px;
+            pointer-events: none;
+        }
+        #coords {
+            position: absolute;
+            bottom: 15px;
+            right: 15px;
+            background: rgba(30,34,50,0.7);
+            color: #aab5d0;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            pointer-events: none;
         }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <div id="login-container">
-        <h2>🎮 Мультиплеер 2D</h2>
+        <h2>🎮 2D Sandbox</h2>
         <input type="text" id="nickname-input" placeholder="Введите ник" maxlength="15" autocomplete="off">
-        <br>
+        <div id="color-picker">
+            <label>Цвет персонажа:</label>
+            <input type="color" id="player-color" value="#3498db">
+        </div>
         <button id="join-btn">Войти в игру</button>
         <div id="error-message"></div>
     </div>
 
     <div id="game-container">
         <canvas id="game-canvas" width="800" height="600"></canvas>
-        <div id="player-list">
-            <h3>👥 Игроки онлайн</h3>
-            <ul id="players-online"></ul>
+        <div id="ui-overlay">
+            <div id="player-list">
+                <h3>👥 Игроки онлайн</h3>
+                <ul id="players-online"></ul>
+            </div>
         </div>
         <div id="ping-info">🔌 Подключение...</div>
+        <div id="coords">x: 0, y: 0</div>
     </div>
 
     <script>
         (function(){
             "use strict";
 
-            // DOM элементы
+            // ---------- DOM ----------
             const loginContainer = document.getElementById('login-container');
             const gameContainer = document.getElementById('game-container');
             const canvas = document.getElementById('game-canvas');
             const ctx = canvas.getContext('2d');
             const nicknameInput = document.getElementById('nickname-input');
+            const colorInput = document.getElementById('player-color');
             const joinBtn = document.getElementById('join-btn');
             const errorMsg = document.getElementById('error-message');
             const playersList = document.getElementById('players-online');
             const pingInfo = document.getElementById('ping-info');
+            const coordsDiv = document.getElementById('coords');
 
-            // Сеть и состояние
+            // ---------- Глобальные переменные ----------
             let socket;
-            let selfPlayer = null;                // ссылка на объект в players
-            let players = {};                     // все игроки (id -> {id, nickname, x, y})
-            let mapWidth = 800, mapHeight = 600;
+            let selfPlayer = null;
+            let players = {};
+            let mapWidth = 2000, mapHeight = 2000, tileSize = 40;
             
-            // Интерполяция для плавности других игроков
-            const interpolatedPositions = {};      // целевые позиции
-            const INTERP_SPEED = 0.3;              // коэффициент сглаживания
+            // Камера
+            let camera = { x: 0, y: 0 };
+            
+            // Карта блоков (загружается с сервера)
+            let worldTiles = [];
 
-            // Управление (клавиши)
-            const keys = {
-                ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false,
-                w: false, a: false, s: false, d: false
+            // Интерполяция других игроков
+            const interpolatedPositions = {};
+            const INTERP_SPEED = 0.25;
+
+            // Управление (через code, не зависит от раскладки)
+            const keyState = {
+                KeyW: false, KeyA: false, KeyS: false, KeyD: false,
+                ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false
             };
-            const MOVE_SPEED = 4.5;                // скорость движения
-            let moveSequence = 0;                  // для отслеживания порядка (не обязательно)
+            const MOVE_SPEED = 5.5;
             
-            // Статистика
             let lastPingTime = 0;
             let latency = 0;
 
-            // ---------- Подключение и обработка сообщений ----------
+            // ---------- Сеть ----------
             function connect() {
-                socket = io({
-                    transports: ['websocket'],      // принудительно WebSocket (быстрее)
-                    upgrade: false
-                });
+                socket = io({ transports: ['websocket'], upgrade: false });
 
                 socket.on('connect', () => {
                     pingInfo.textContent = '🟢 Подключено';
-                    console.log('Подключены к серверу');
                 });
 
                 socket.on('disconnect', () => {
                     pingInfo.textContent = '🔴 Отключено';
                 });
 
-                // Инициализация после входа
                 socket.on('init', (data) => {
                     players = data.players;
                     selfPlayer = players[socket.id];
                     mapWidth = data.map.width;
                     mapHeight = data.map.height;
+                    tileSize = data.map.tileSize || 40;
+                    worldTiles = data.worldTiles || [];
 
-                    // Инициализируем интерполированные позиции
                     for (const id in players) {
-                        if (id !== selfPlayer?.id) {
+                        if (id !== selfPlayer.id) {
                             interpolatedPositions[id] = { x: players[id].x, y: players[id].y };
                         }
                     }
@@ -179,52 +204,53 @@
                     loginContainer.style.display = 'none';
                     gameContainer.style.display = 'block';
                     
-                    // Запускаем цикл
+                    // Центрируем камеру на игроке
+                    updateCamera();
+                    
                     requestAnimationFrame(gameLoop);
                     updatePlayersList();
                     
-                    // Измеряем пинг
                     lastPingTime = performance.now();
                     socket.emit('ping');
                 });
 
-                // Новый игрок
                 socket.on('player joined', (player) => {
                     players[player.id] = player;
                     interpolatedPositions[player.id] = { x: player.x, y: player.y };
                     updatePlayersList();
                 });
 
-                // Игрок вышел
                 socket.on('player left', (id) => {
                     delete players[id];
                     delete interpolatedPositions[id];
                     updatePlayersList();
                 });
 
-                // Обновление позиции (от сервера)
                 socket.on('player moved', (data) => {
                     const player = players[data.id];
                     if (!player) return;
                     
                     if (data.id === selfPlayer?.id) {
-                        // Коррекция позиции своего игрока (сервер авторитетен)
-                        // Применяем с небольшим сглаживанием, чтобы избежать резких скачков
-                        selfPlayer.x += (data.x - selfPlayer.x) * 0.4;
-                        selfPlayer.y += (data.y - selfPlayer.y) * 0.4;
+                        // Коррекция своего игрока (плавно)
+                        selfPlayer.x += (data.x - selfPlayer.x) * 0.35;
+                        selfPlayer.y += (data.y - selfPlayer.y) * 0.35;
                     } else {
-                        // Для других игроков запоминаем целевую позицию для интерполяции
                         interpolatedPositions[data.id] = { x: data.x, y: data.y };
                     }
                 });
 
-                // Пинг-понг
+                socket.on('block update', (data) => {
+                    // Обновление блока (для будущего)
+                    if (worldTiles[data.tileX] && worldTiles[data.tileX][data.tileY] !== undefined) {
+                        worldTiles[data.tileX][data.tileY] = data.block;
+                    }
+                });
+
                 socket.on('pong', () => {
                     latency = Math.round(performance.now() - lastPingTime);
                     pingInfo.textContent = `📶 Пинг: ${latency} мс`;
                 });
 
-                // Регулярное измерение пинга
                 setInterval(() => {
                     if (socket && socket.connected) {
                         lastPingTime = performance.now();
@@ -241,13 +267,16 @@
                     return;
                 }
                 if (nickname.length > 15) {
-                    errorMsg.textContent = 'Ник слишком длинный (макс 15)';
+                    errorMsg.textContent = 'Ник слишком длинный';
                     return;
                 }
 
                 if (!socket) connect();
 
-                socket.emit('set nickname', nickname, (response) => {
+                socket.emit('set nickname', { 
+                    nickname: nickname, 
+                    color: colorInput.value 
+                }, (response) => {
                     if (response.success) {
                         errorMsg.textContent = '';
                     } else {
@@ -263,59 +292,52 @@
                 if (e.key === 'Enter') tryJoin();
             });
 
-            // ---------- Управление (клавиатура) ----------
+            // ---------- Управление (не зависит от раскладки) ----------
             window.addEventListener('keydown', (e) => {
-                const key = e.key;
-                if (key in keys) {
-                    keys[key] = true;
+                if (e.code in keyState) {
+                    keyState[e.code] = true;
                     e.preventDefault();
                 }
-                // Стрелки
-                if (key.startsWith('Arrow')) {
-                    keys[key] = true;
-                    e.preventDefault();
-                }
+                // Блокируем скролл стрелками
+                if (e.code.startsWith('Arrow')) e.preventDefault();
             });
             
             window.addEventListener('keyup', (e) => {
-                const key = e.key;
-                if (key in keys) {
-                    keys[key] = false;
+                if (e.code in keyState) {
+                    keyState[e.code] = false;
                     e.preventDefault();
                 }
-                if (key.startsWith('Arrow')) {
-                    keys[key] = false;
-                    e.preventDefault();
-                }
+                if (e.code.startsWith('Arrow')) e.preventDefault();
             });
 
-            // Блокируем контекстное меню и выделение на canvas
             canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+            window.addEventListener('blur', () => {
+                for (let k in keyState) keyState[k] = false;
+            });
 
-            // ---------- Обработка движения (предсказание) ----------
+            // ---------- Движение с предсказанием ----------
             function handleInput() {
                 if (!selfPlayer) return;
 
                 let dx = 0, dy = 0;
-                if (keys.ArrowUp || keys.w) dy -= 1;
-                if (keys.ArrowDown || keys.s) dy += 1;
-                if (keys.ArrowLeft || keys.a) dx -= 1;
-                if (keys.ArrowRight || keys.d) dx += 1;
+                if (keyState.KeyW || keyState.ArrowUp) dy -= 1;
+                if (keyState.KeyS || keyState.ArrowDown) dy += 1;
+                if (keyState.KeyA || keyState.ArrowLeft) dx -= 1;
+                if (keyState.KeyD || keyState.ArrowRight) dx += 1;
 
                 if (dx !== 0 || dy !== 0) {
-                    // Нормализация
                     const len = Math.sqrt(dx*dx + dy*dy);
                     dx = (dx / len) * MOVE_SPEED;
                     dy = (dy / len) * MOVE_SPEED;
 
-                    // Предсказание: сразу двигаем локального игрока
                     let newX = selfPlayer.x + dx;
                     let newY = selfPlayer.y + dy;
                     
-                    // Ограничиваем границами
+                    // Границы карты
                     newX = Math.max(20, Math.min(mapWidth - 20, newX));
                     newY = Math.max(20, Math.min(mapHeight - 20, newY));
                     
+                    // Предсказание (локальное движение)
                     selfPlayer.x = newX;
                     selfPlayer.y = newY;
 
@@ -330,86 +352,122 @@
                     const player = players[id];
                     if (!player) continue;
                     const target = interpolatedPositions[id];
-                    // Плавное приближение к целевой позиции
                     player.x += (target.x - player.x) * INTERP_SPEED;
                     player.y += (target.y - player.y) * INTERP_SPEED;
                 }
             }
 
+            // ---------- Камера ----------
+            function updateCamera() {
+                if (!selfPlayer) return;
+                // Центрируем камеру на игроке, но не выходим за границы карты
+                camera.x = Math.max(0, Math.min(mapWidth - canvas.width, selfPlayer.x - canvas.width/2));
+                camera.y = Math.max(0, Math.min(mapHeight - canvas.height, selfPlayer.y - canvas.height/2));
+            }
+
             // ---------- Отрисовка ----------
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Сохраняем контекст и применяем трансформацию камеры
+                ctx.save();
+                ctx.translate(-camera.x, -camera.y);
 
-                // Сетка (уже есть фон)
-                ctx.strokeStyle = '#6a8a5c';
-                ctx.lineWidth = 1;
-                for (let i = 0; i <= mapWidth; i += 40) {
+                // Рисуем тайлы карты (блоки)
+                if (worldTiles) {
+                    for (let tx = 0; tx < worldTiles.length; tx++) {
+                        for (let ty = 0; ty < worldTiles[tx].length; ty++) {
+                            const block = worldTiles[tx][ty];
+                            if (block) {
+                                const x = tx * tileSize;
+                                const y = ty * tileSize;
+                                // Проверяем, попадает ли блок в область видимости камеры (оптимизация)
+                                if (x + tileSize >= camera.x && x <= camera.x + canvas.width &&
+                                    y + tileSize >= camera.y && y <= camera.y + canvas.height) {
+                                    ctx.fillStyle = '#5d4a2e';
+                                    ctx.fillRect(x, y, tileSize, tileSize);
+                                    ctx.strokeStyle = '#3a2e1e';
+                                    ctx.lineWidth = 1;
+                                    ctx.strokeRect(x, y, tileSize, tileSize);
+                                    // Трава сверху
+                                    ctx.fillStyle = '#3c8c3c';
+                                    ctx.fillRect(x+2, y+2, tileSize-4, 5);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Сетка
+                ctx.strokeStyle = '#7a9a6c';
+                ctx.lineWidth = 0.5;
+                for (let i = 0; i <= mapWidth; i += tileSize) {
                     ctx.beginPath();
                     ctx.moveTo(i, 0);
                     ctx.lineTo(i, mapHeight);
-                    ctx.strokeStyle = '#5a7a4c';
                     ctx.stroke();
                 }
-                for (let i = 0; i <= mapHeight; i += 40) {
+                for (let i = 0; i <= mapHeight; i += tileSize) {
                     ctx.beginPath();
                     ctx.moveTo(0, i);
                     ctx.lineTo(mapWidth, i);
-                    ctx.strokeStyle = '#5a7a4c';
                     ctx.stroke();
                 }
 
-                // Границы карты
-                ctx.strokeStyle = '#2c3e4e';
-                ctx.lineWidth = 4;
-                ctx.strokeRect(20, 20, mapWidth - 40, mapHeight - 40);
-
-                // Отрисовка всех игроков
+                // Рисуем игроков
                 for (const id in players) {
                     const p = players[id];
                     const isSelf = (id === selfPlayer?.id);
-
-                    // Тень под игроком
-                    ctx.shadowColor = '#00000040';
-                    ctx.shadowBlur = 10;
-                    ctx.shadowOffsetY = 2;
-
-                    // Кружок игрока
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, 15, 0, 2 * Math.PI);
                     
-                    // Градиент для красоты
-                    const gradient = ctx.createRadialGradient(p.x-5, p.y-5, 3, p.x, p.y, 15);
+                    // Пропускаем если вне экрана (оптимизация)
+                    if (p.x + 30 < camera.x || p.x - 30 > camera.x + canvas.width ||
+                        p.y + 30 < camera.y || p.y - 30 > camera.y + canvas.height) continue;
+
+                    // Тень
+                    ctx.shadowColor = '#00000060';
+                    ctx.shadowBlur = 12;
+                    ctx.shadowOffsetY = 3;
+                    
+                    // Кружок
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 18, 0, 2 * Math.PI);
+                    const gradient = ctx.createRadialGradient(p.x-5, p.y-5, 3, p.x, p.y, 18);
                     if (isSelf) {
-                        gradient.addColorStop(0, '#6eb5ff');
-                        gradient.addColorStop(1, '#2a6ebb');
+                        gradient.addColorStop(0, '#aad0ff');
+                        gradient.addColorStop(1, p.color || '#3498db');
                     } else {
-                        gradient.addColorStop(0, '#ff8a8a');
-                        gradient.addColorStop(1, '#c44');
+                        gradient.addColorStop(0, '#ffb0b0');
+                        gradient.addColorStop(1, p.color || '#e74c3c');
                     }
                     ctx.fillStyle = gradient;
                     ctx.fill();
-                    
                     ctx.shadowBlur = 0;
                     ctx.shadowOffsetY = 0;
                     ctx.strokeStyle = '#fff';
-                    ctx.lineWidth = 2.5;
+                    ctx.lineWidth = 3;
                     ctx.stroke();
 
-                    // Никнейм
-                    ctx.font = 'bold 14px "Segoe UI", Arial, sans-serif';
-                    ctx.fillStyle = '#ffffff';
+                    // Ник
+                    ctx.font = 'bold 14px "Segoe UI"';
+                    ctx.fillStyle = '#fff';
                     ctx.shadowColor = '#000';
                     ctx.shadowBlur = 5;
                     ctx.textAlign = 'center';
                     ctx.fillText(p.nickname, p.x, p.y - 28);
                     ctx.shadowBlur = 0;
                     
-                    // Индикатор "вы"
                     if (isSelf) {
                         ctx.font = '12px "Segoe UI"';
-                        ctx.fillStyle = '#cce4ff';
-                        ctx.fillText('(вы)', p.x, p.y - 42);
+                        ctx.fillStyle = '#d0e0ff';
+                        ctx.fillText('(вы)', p.x, p.y - 45);
                     }
+                }
+
+                ctx.restore();
+
+                // Обновляем координаты на экране
+                if (selfPlayer) {
+                    coordsDiv.textContent = `📍 x: ${Math.round(selfPlayer.x)} y: ${Math.round(selfPlayer.y)}`;
                 }
             }
 
@@ -420,23 +478,40 @@
                 playersList.innerHTML = list || '<li>Пусто</li>';
             }
 
-            // Главный игровой цикл
+            // ---------- Игровой цикл ----------
             function gameLoop() {
-                handleInput();                 // движение своего игрока
-                interpolatePlayers();          // плавное движение других
+                handleInput();
+                interpolatePlayers();
+                updateCamera();
                 draw();
-                updatePlayersList();           // обновляем список онлайн
+                updatePlayersList();
                 requestAnimationFrame(gameLoop);
             }
 
-            // Очистка при закрытии
             window.addEventListener('beforeunload', () => {
                 if (socket) socket.disconnect();
             });
 
-            // Если фокус потерян - сбрасываем клавиши
-            window.addEventListener('blur', () => {
-                for (let k in keys) keys[k] = false;
+            // Обработка клика для разрушения блоков (заготовка)
+            canvas.addEventListener('click', (e) => {
+                if (!selfPlayer) return;
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                // Координаты клика в мире
+                const worldX = (e.clientX - rect.left) * scaleX + camera.x;
+                const worldY = (e.clientY - rect.top) * scaleY + camera.y;
+                
+                // Определяем тайл
+                const tileX = Math.floor(worldX / tileSize);
+                const tileY = Math.floor(worldY / tileSize);
+                
+                // Проверяем дистанцию до игрока (например, 100 пикселей)
+                const dist = Math.hypot(selfPlayer.x - worldX, selfPlayer.y - worldY);
+                if (dist < 100) {
+                    socket.emit('break block', { tileX, tileY });
+                }
             });
 
         })();
