@@ -13,11 +13,10 @@ const MAP_WIDTH = 3000;
 const MAP_HEIGHT = 3000;
 const TILE_SIZE = 40;
 
-// Карта блоков (заполним для теста)
+// Карта блоков
 const worldTiles = Array(Math.floor(MAP_WIDTH / TILE_SIZE)).fill().map(() =>
     Array(Math.floor(MAP_HEIGHT / TILE_SIZE)).fill(null)
 );
-// Пример ландшафта
 for (let i = 0; i < 50; i++) {
     for (let j = 0; j < 30; j++) {
         if (i < worldTiles.length && j < worldTiles[0].length)
@@ -25,21 +24,17 @@ for (let i = 0; i < 50; i++) {
     }
 }
 
-// Игроки
+// Аккаунты (в памяти)
+const accounts = {}; // nickname -> { password, ... }
+
+// Активные игроки
 const players = {};
 
-// Администраторы (список socket.id, которые ввели пароль)
+// Администраторы
 const admins = new Set();
-const ADMIN_PASSWORD = 'secret123'; // поменяйте на свой
+const ADMIN_PASSWORD = 'secret123';
 
-// ---------- Вспомогательные функции ----------
-function isNicknameTaken(nickname) {
-    return Object.values(players).some(p => p.nickname === nickname);
-}
-function getRandomSpawn() {
-    return { x: 500 + Math.random() * 500, y: 500 + Math.random() * 500 };
-}
-// Генерация предмета по ID
+// Предметы
 function createItem(itemId, count = 1) {
     const items = {
         'sword': { name: 'Меч', emoji: '🗡️', damage: 25 },
@@ -52,33 +47,49 @@ function createItem(itemId, count = 1) {
     return { id: itemId, count, ...base };
 }
 
+function getRandomSpawn() {
+    return { x: 500 + Math.random() * 500, y: 500 + Math.random() * 500 };
+}
+
 // ---------- Обработка подключений ----------
 io.on('connection', (socket) => {
     console.log(`Подключение: ${socket.id}`);
 
-    socket.on('set nickname', (data, callback) => {
-        const { nickname, color } = data;
-        if (!nickname || nickname.trim() === '') return callback({ success: false, message: 'Пустой ник' });
-        if (isNicknameTaken(nickname)) return callback({ success: false, message: 'Ник занят' });
+    // Регистрация
+    socket.on('register', (data, callback) => {
+        const { nickname, password, color } = data;
+        if (!nickname || !password) return callback({ success: false, message: 'Логин и пароль обязательны' });
+        if (accounts[nickname]) return callback({ success: false, message: 'Аккаунт уже существует' });
+        accounts[nickname] = { password, color: color || '#3498db' };
+        callback({ success: true });
+    });
+
+    // Вход
+    socket.on('login', (data, callback) => {
+        const { nickname, password } = data;
+        const acc = accounts[nickname];
+        if (!acc || acc.password !== password) return callback({ success: false, message: 'Неверный логин или пароль' });
+        if (Object.values(players).some(p => p.nickname === nickname)) return callback({ success: false, message: 'Уже в игре' });
 
         const spawn = getRandomSpawn();
         players[socket.id] = {
             id: socket.id,
-            nickname: nickname.trim(),
-            color: color || '#3498db',
+            nickname,
+            color: acc.color,
             x: spawn.x, y: spawn.y,
             hp: 100, maxHp: 100,
             inventory: [
                 createItem('sword', 1),
                 createItem('pickaxe', 1),
                 createItem('apple', 5),
-                null, null, null, null, null, null // ещё 6 слотов
+                null, null, null, null, null, null
             ],
             selectedSlot: 0,
             lastAttack: 0
         };
 
-        callback({ success: true });
+        callback({ success: true, self: players[socket.id] });
+
         socket.emit('init', {
             self: players[socket.id],
             players,
@@ -104,7 +115,7 @@ io.on('connection', (socket) => {
         const target = players[targetId];
         if (!attacker || !target) return;
         const now = Date.now();
-        if (now - attacker.lastAttack < 500) return; // кулдаун 0.5 сек
+        if (now - attacker.lastAttack < 500) return;
         const dist = Math.hypot(attacker.x - target.x, attacker.y - target.y);
         if (dist > 60) return;
 
@@ -115,7 +126,6 @@ io.on('connection', (socket) => {
 
         io.emit('player damaged', { id: targetId, hp: target.hp, attacker: attacker.nickname });
         if (target.hp <= 0) {
-            // Смерть: сброс в спавн и восстановление HP
             const spawn = getRandomSpawn();
             target.x = spawn.x; target.y = spawn.y;
             target.hp = target.maxHp;
@@ -128,17 +138,13 @@ io.on('connection', (socket) => {
         const p = players[socket.id];
         if (!p) return;
         const item = p.inventory[p.selectedSlot];
-        if (!item) return;
-        if (item.id === 'apple') {
-            if (p.hp < p.maxHp) {
-                p.hp = Math.min(p.maxHp, p.hp + item.heal);
-                item.count--;
-                if (item.count <= 0) p.inventory[p.selectedSlot] = null;
-                io.emit('inventory update', { id: socket.id, inventory: p.inventory, selectedSlot: p.selectedSlot });
-                io.emit('player hp', { id: socket.id, hp: p.hp });
-            }
+        if (item?.id === 'apple' && p.hp < p.maxHp) {
+            p.hp = Math.min(p.maxHp, p.hp + item.heal);
+            item.count--;
+            if (item.count <= 0) p.inventory[p.selectedSlot] = null;
+            io.emit('inventory update', { id: socket.id, inventory: p.inventory, selectedSlot: p.selectedSlot });
+            io.emit('player hp', { id: socket.id, hp: p.hp });
         }
-        // другие предметы позже
     });
 
     socket.on('select slot', (slot) => {
@@ -159,93 +165,84 @@ io.on('connection', (socket) => {
         if (worldTiles[tileX][tileY] !== null) {
             worldTiles[tileX][tileY] = null;
             io.emit('block update', { tileX, tileY, block: null });
-            // Дроп предмета (упрощённо: добавим дерево)
+            // Дроп дерева
             const drop = createItem('wood', 1);
-            // Добавим в инвентарь игроку (если есть место)
             const inv = p.inventory;
             let added = false;
             for (let i = 0; i < inv.length; i++) {
-                if (inv[i] && inv[i].id === drop.id) {
-                    inv[i].count += drop.count;
-                    added = true;
-                    break;
-                }
+                if (inv[i] && inv[i].id === drop.id) { inv[i].count += drop.count; added = true; break; }
             }
             if (!added) {
                 for (let i = 0; i < inv.length; i++) {
                     if (!inv[i]) { inv[i] = drop; added = true; break; }
                 }
             }
-            if (added) {
-                socket.emit('inventory update', { inventory: inv, selectedSlot: p.selectedSlot });
-            }
+            if (added) socket.emit('inventory update', { inventory: inv, selectedSlot: p.selectedSlot });
         }
     });
 
-    // Админ-консоль
-    socket.on('admin command', (data) => {
-        const { password, command } = data;
-        // Проверка пароля
-        if (password === ADMIN_PASSWORD) {
-            admins.add(socket.id);
-            socket.emit('admin status', true);
-        }
-        if (!admins.has(socket.id)) {
-            socket.emit('chat message', { sender: 'System', text: 'Нет прав администратора. Введите /op <пароль>' });
-            return;
-        }
-
-        const args = command.split(' ');
-        const cmd = args[0].toLowerCase();
-        if (cmd === '/give') {
-            const targetNick = args[1];
-            const itemId = args[2];
-            let count = parseInt(args[3]) || 1;
-            const target = Object.values(players).find(p => p.nickname === targetNick);
-            if (target) {
-                const item = createItem(itemId, count);
-                let added = false;
-                for (let i = 0; i < target.inventory.length; i++) {
-                    if (target.inventory[i] && target.inventory[i].id === item.id) {
-                        target.inventory[i].count += item.count;
-                        added = true;
-                        break;
-                    }
-                }
-                if (!added) {
-                    for (let i = 0; i < target.inventory.length; i++) {
-                        if (!target.inventory[i]) { target.inventory[i] = item; added = true; break; }
-                    }
-                }
-                if (added) {
-                    io.to(target.id).emit('inventory update', { inventory: target.inventory, selectedSlot: target.selectedSlot });
-                    socket.emit('chat message', { sender: 'Admin', text: `Выдано ${item.count}x ${item.name} игроку ${targetNick}` });
-                }
-            }
-        } else if (cmd === '/setblock') {
-            const x = parseInt(args[1]), y = parseInt(args[2]), type = args[3] || 'grass';
-            if (!isNaN(x) && !isNaN(y) && x>=0 && x<worldTiles.length && y>=0 && y<worldTiles[0].length) {
-                worldTiles[x][y] = { type };
-                io.emit('block update', { tileX: x, tileY: y, block: { type } });
-                socket.emit('chat message', { sender: 'Admin', text: `Блок установлен в ${x},${y}` });
-            }
-        } else if (cmd === '/tp') {
-            const nick = args[1];
-            const target = Object.values(players).find(p => p.nickname === nick);
-            if (target) {
-                const admin = players[socket.id];
-                admin.x = target.x; admin.y = target.y;
-                io.emit('player moved', { id: socket.id, x: admin.x, y: admin.y });
-            }
-        } else if (cmd === '/help') {
-            socket.emit('chat message', { sender: 'Admin', text: '/give <ник> <предмет> [кол-во] | /setblock <x> <y> [тип] | /tp <ник>' });
-        }
-    });
-
+    // Чат и команды
     socket.on('chat message', (msg) => {
         const p = players[socket.id];
         if (!p) return;
-        io.emit('chat message', { sender: p.nickname, text: msg });
+        if (msg.startsWith('/')) {
+            const args = msg.slice(1).split(' ');
+            const cmd = args[0].toLowerCase();
+            if (cmd === 'find' && args[1]) {
+                const target = Object.values(players).find(pl => pl.nickname === args[1]);
+                if (target) {
+                    socket.emit('chat message', { sender: 'System', text: `${target.nickname} находится на (${Math.round(target.x)}, ${Math.round(target.y)})` });
+                } else {
+                    socket.emit('chat message', { sender: 'System', text: 'Игрок не найден' });
+                }
+            } else if (cmd === 'tp' && args[1]) {
+                const target = Object.values(players).find(pl => pl.nickname === args[1]);
+                if (target) {
+                    p.x = target.x; p.y = target.y;
+                    io.emit('player moved', { id: socket.id, x: p.x, y: p.y });
+                    socket.emit('chat message', { sender: 'System', text: `Телепортирован к ${target.nickname}` });
+                } else {
+                    socket.emit('chat message', { sender: 'System', text: 'Игрок не найден' });
+                }
+            } else if (cmd === 'op' && args[1] === ADMIN_PASSWORD) {
+                admins.add(socket.id);
+                socket.emit('admin status', true);
+                socket.emit('chat message', { sender: 'System', text: 'Права администратора получены' });
+            } else if (admins.has(socket.id)) {
+                // Админские команды
+                if (cmd === 'give' && args[1] && args[2]) {
+                    const target = Object.values(players).find(pl => pl.nickname === args[1]);
+                    if (target) {
+                        const item = createItem(args[2], parseInt(args[3]) || 1);
+                        let added = false;
+                        for (let i = 0; i < target.inventory.length; i++) {
+                            if (target.inventory[i] && target.inventory[i].id === item.id) {
+                                target.inventory[i].count += item.count; added = true; break;
+                            }
+                        }
+                        if (!added) {
+                            for (let i = 0; i < target.inventory.length; i++) {
+                                if (!target.inventory[i]) { target.inventory[i] = item; added = true; break; }
+                            }
+                        }
+                        if (added) {
+                            io.to(target.id).emit('inventory update', { inventory: target.inventory, selectedSlot: target.selectedSlot });
+                            socket.emit('chat message', { sender: 'Admin', text: `Выдано ${item.count}x ${item.name} игроку ${target.nickname}` });
+                        }
+                    }
+                } else if (cmd === 'setblock' && args[1] && args[2]) {
+                    const x = parseInt(args[1]), y = parseInt(args[2]), type = args[3] || 'grass';
+                    if (!isNaN(x) && !isNaN(y) && x>=0 && x<worldTiles.length && y>=0 && y<worldTiles[0].length) {
+                        worldTiles[x][y] = { type };
+                        io.emit('block update', { tileX: x, tileY: y, block: { type } });
+                    }
+                }
+            } else {
+                socket.emit('chat message', { sender: 'System', text: 'Неизвестная команда' });
+            }
+        } else {
+            io.emit('chat message', { sender: p.nickname, text: msg });
+        }
     });
 
     socket.on('ping', () => socket.emit('pong'));

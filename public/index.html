@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2D Survival — Fixed</title>
+    <title>2D Survival — Аккаунты</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         body {
@@ -20,22 +20,23 @@
             color: #e0e5f0; max-width: 90vw;
         }
         #login-container h2 { color: #6c9eff; margin-top: 0; }
-        #nickname-input {
+        .input-field {
             padding: 10px 15px; font-size: 16px; width: 100%;
             max-width: 260px; border: none; border-radius: 6px;
-            background: #1e2332; color: white; margin: 15px 0;
+            background: #1e2332; color: white; margin: 10px 0;
             outline: 1px solid #3e4a6b;
         }
         #color-picker { margin: 10px 0; }
         #color-picker label { display: block; margin-bottom: 5px; color: #b0bbd5; }
-        #join-btn {
+        .btn {
             padding: 12px 28px; font-size: 18px; font-weight: bold;
             background: #6c9eff; color: white; border: none;
             border-radius: 8px; cursor: pointer; transition: 0.2s;
             margin-top: 10px; width: 100%;
         }
-        #join-btn:hover { background: #5a8af0; }
+        .btn:hover { background: #5a8af0; }
         #error-message { color: #ff7b7b; margin-top: 12px; min-height: 20px; }
+        #toggle-mode { color: #6c9eff; cursor: pointer; margin-top: 15px; text-decoration: underline; }
 
         #game-container {
             display: none; position: relative;
@@ -47,7 +48,7 @@
             touch-action: none; cursor: crosshair;
         }
 
-        /* UI */
+        /* UI элементы */
         #ui-overlay {
             position: absolute; top: 15px; right: 15px;
             background: rgba(30,34,50,0.85); backdrop-filter: blur(4px);
@@ -55,25 +56,18 @@
             font-size: 14px; max-height: 220px; overflow-y: auto;
             border: 1px solid #4a5a7a; pointer-events: none; z-index: 10;
         }
-        #player-list h3 { margin: 0 0 6px 0; color: #6c9eff; }
-        #player-list ul { margin: 0; padding-left: 18px; }
-
         #health-bar-container {
             position: absolute; top: 15px; left: 15px;
             width: 200px; height: 20px; background: #3a2a2a;
             border-radius: 10px; border: 2px solid #5a3a3a;
             overflow: hidden; z-index: 10;
         }
-        #health-bar-fill {
-            height: 100%; width: 100%; background: #e74c3c;
-            transition: width 0.1s;
-        }
+        #health-bar-fill { height: 100%; width: 100%; background: #e74c3c; }
         #health-text {
             position: absolute; top: 15px; left: 220px;
             color: white; font-weight: bold; text-shadow: 1px 1px 2px black;
             z-index: 10;
         }
-
         #ping-fps {
             position: absolute; bottom: 15px; left: 15px;
             background: rgba(30,34,50,0.7); color: #aab5d0;
@@ -103,36 +97,23 @@
             transition: 0.1s; box-shadow: inset 0 0 5px #00000050;
             cursor: pointer; position: relative;
         }
-        .hotbar-slot.selected {
-            border-color: #ffd966; background: #3e4e6e;
-            transform: scale(1.05); box-shadow: 0 0 12px #ffd96680;
-        }
-        .hotbar-slot .item-count {
-            position: absolute; bottom: 2px; right: 4px;
-            font-size: 12px; color: #ddd; text-shadow: 1px 1px 1px black;
-        }
+        .hotbar-slot.selected { border-color: #ffd966; background: #3e4e6e; }
+        .hotbar-slot .item-count { position: absolute; bottom: 2px; right: 4px; font-size: 12px; }
 
         /* Инвентарь */
         #inventory-window {
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 400px; background: #2a2f42dd; backdrop-filter: blur(8px);
             border: 2px solid #6c9eff; border-radius: 16px; padding: 20px;
-            display: none; grid-template-columns: repeat(5, 1fr);
-            gap: 8px; z-index: 50;
+            display: none; grid-template-columns: repeat(5, 1fr); gap: 8px; z-index: 50;
         }
         .inventory-slot {
-            aspect-ratio: 1/1; background: #1e2332;
-            border: 2px solid #4a5a7a; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 24px; color: white; cursor: pointer;
-            position: relative;
-        }
-        .inventory-slot .item-count {
-            position: absolute; bottom: 2px; right: 4px; font-size: 12px;
+            aspect-ratio: 1/1; background: #1e2332; border: 2px solid #4a5a7a;
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: white; cursor: pointer; position: relative;
         }
 
-        /* Чат и консоль */
+        /* Чат */
         #chat-box {
             position: absolute; bottom: 100px; left: 20px;
             width: 300px; max-height: 200px; overflow-y: auto;
@@ -149,7 +130,7 @@
             background: #1e2332; border: 1px solid #6c9eff; color: white;
         }
 
-        /* Мобильные контролы */
+        /* Мобильные кнопки */
         #mobile-controls {
             position: absolute; bottom: 90px; left: 0; right: 0;
             display: flex; justify-content: space-between;
@@ -179,25 +160,21 @@
             margin-bottom: 10px;
         }
         .mobile-btn:active { transform: scale(0.95); }
-        #inventory-mobile-btn { background: rgba(108,158,255,0.7); }
-        #chat-mobile-btn { background: rgba(100,100,200,0.7); }
 
-        @media (pointer: fine) {
-            #mobile-controls { display: none; }
-        }
-        @media (max-width: 600px) {
-            .hotbar-slot { width: 40px; height: 40px; font-size: 20px; }
-        }
+        @media (pointer: fine) { #mobile-controls { display: none; } }
+        @media (max-width: 600px) { .hotbar-slot { width: 40px; height: 40px; font-size: 20px; } }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <div id="login-container">
         <h2>🎮 2D Survival</h2>
-        <input type="text" id="nickname-input" placeholder="Введите ник" maxlength="15" autocomplete="off" enterkeyhint="done">
+        <input type="text" id="nickname-input" class="input-field" placeholder="Логин" maxlength="15" autocomplete="off">
+        <input type="password" id="password-input" class="input-field" placeholder="Пароль" autocomplete="off">
         <div id="color-picker"><label>Цвет:</label><input type="color" id="player-color" value="#3498db"></div>
-        <button id="join-btn">Войти</button>
+        <button class="btn" id="join-btn">Войти</button>
         <div id="error-message"></div>
+        <div id="toggle-mode">Нет аккаунта? Зарегистрироваться</div>
         <p style="font-size:13px; color:#8a9bb5; margin-top:15px;">WASD/Стрелки | E-инвентарь | Enter-чат | ~-консоль | F/клик-атака</p>
     </div>
 
@@ -212,17 +189,12 @@
         <div id="ping-fps">🔌 Подключение...</div>
         <div id="coords">x: 0, y: 0</div>
 
-        <!-- Хотбар -->
         <div id="hotbar-container"></div>
-
-        <!-- Инвентарь -->
         <div id="inventory-window"></div>
 
-        <!-- Чат -->
         <div id="chat-box"></div>
-        <div id="chat-input-container"><input type="text" id="chat-input" placeholder="Введите сообщение или команду /..." autocomplete="off"></div>
+        <div id="chat-input-container"><input type="text" id="chat-input" placeholder="Введите сообщение или /команда" autocomplete="off"></div>
 
-        <!-- Мобильные контролы -->
         <div id="mobile-controls">
             <div id="joystick-area"><div id="joystick-thumb"></div></div>
             <div style="display: flex; gap: 10px;">
@@ -236,15 +208,17 @@
     <script>
         (function(){
             "use strict";
-            // ---------- DOM элементы ----------
+            // ---------- DOM ----------
             const loginContainer = document.getElementById('login-container');
             const gameContainer = document.getElementById('game-container');
             const canvas = document.getElementById('game-canvas');
             const ctx = canvas.getContext('2d');
             const nicknameInput = document.getElementById('nickname-input');
+            const passwordInput = document.getElementById('password-input');
             const colorInput = document.getElementById('player-color');
             const joinBtn = document.getElementById('join-btn');
             const errorMsg = document.getElementById('error-message');
+            const toggleMode = document.getElementById('toggle-mode');
             const playersList = document.getElementById('players-online');
             const healthFill = document.getElementById('health-bar-fill');
             const healthText = document.getElementById('health-text');
@@ -255,27 +229,21 @@
             const chatBox = document.getElementById('chat-box');
             const chatInputContainer = document.getElementById('chat-input-container');
             const chatInput = document.getElementById('chat-input');
-
-            // Мобильные
             const joystickArea = document.getElementById('joystick-area');
             const joystickThumb = document.getElementById('joystick-thumb');
             const attackMobileBtn = document.getElementById('attack-mobile-btn');
             const inventoryMobileBtn = document.getElementById('inventory-mobile-btn');
             const chatMobileBtn = document.getElementById('chat-mobile-btn');
 
-            // ---------- Глобальные переменные ----------
+            // ---------- Состояние ----------
             let socket;
             let selfPlayer = null;
             let players = {};
             let mapWidth = 3000, mapHeight = 3000, tileSize = 40;
             let camera = { x: 0, y: 0 };
             let worldTiles = [];
-
-            // Предсказание движения (анти-откат)
             let clientPredictedX = 0, clientPredictedY = 0;
             let serverConfirmedX = 0, serverConfirmedY = 0;
-
-            // Интерполяция других игроков
             const interpolatedPositions = {};
             const INTERP_SPEED = 0.3;
 
@@ -290,17 +258,17 @@
             let inventoryOpen = false;
             const hotbarSlots = [];
 
-            // Чат и консоль
+            // Чат
             let chatOpen = false;
-            let consoleMode = false;
             let isAdmin = false;
+            let registerMode = false; // false = вход, true = регистрация
 
             // Статистика
             let latency = 0, fps = 60;
             let lastPingTime = 0;
             let frameCount = 0, lastFpsUpdate = performance.now();
 
-            // ---------- Инициализация UI ----------
+            // ---------- UI Функции ----------
             function createHotbar() {
                 hotbarContainer.innerHTML = '';
                 for (let i = 0; i < 9; i++) {
@@ -365,6 +333,15 @@
                 chatBox.scrollTop = chatBox.scrollHeight;
                 while (chatBox.children.length > 20) chatBox.removeChild(chatBox.firstChild);
             }
+            function updatePingFps(disconnected = false) {
+                pingFpsDiv.textContent = disconnected ? '🔴 Отключено' : `📶 ${latency}ms | 🎮 ${fps} FPS`;
+            }
+            function updateHealthDisplay() {
+                if (!selfPlayer) return;
+                const percent = (selfPlayer.hp / selfPlayer.maxHp) * 100;
+                healthFill.style.width = percent + '%';
+                healthText.textContent = `❤️ ${selfPlayer.hp}/${selfPlayer.maxHp}`;
+            }
 
             // ---------- Сеть ----------
             function connect() {
@@ -391,7 +368,7 @@
                     updatePlayersList();
                     lastPingTime = performance.now();
                     socket.emit('ping');
-                    addChatMessage('System', 'Добро пожаловать! Используйте /help для команд.');
+                    addChatMessage('System', 'Добро пожаловать! Команды: /find <ник>, /tp <ник>');
                 });
                 socket.on('player joined', (p) => { players[p.id] = p; interpolatedPositions[p.id] = { x: p.x, y: p.y }; updatePlayersList(); });
                 socket.on('player left', (id) => { delete players[id]; delete interpolatedPositions[id]; updatePlayersList(); });
@@ -429,37 +406,50 @@
                 setInterval(() => { if (socket?.connected) { lastPingTime = performance.now(); socket.emit('ping'); } }, 2000);
             }
 
-            function updatePingFps(disconnected = false) {
-                pingFpsDiv.textContent = disconnected ? '🔴 Отключено' : `📶 ${latency}ms | 🎮 ${fps} FPS`;
-            }
-            function updateHealthDisplay() {
-                if (!selfPlayer) return;
-                const percent = (selfPlayer.hp / selfPlayer.maxHp) * 100;
-                healthFill.style.width = percent + '%';
-                healthText.textContent = `❤️ ${selfPlayer.hp}/${selfPlayer.maxHp}`;
-            }
-
-            // ---------- Вход ----------
-            function tryJoin() {
+            // ---------- Вход / Регистрация ----------
+            function tryAuth() {
                 const nickname = nicknameInput.value.trim();
-                if (!nickname) { errorMsg.textContent = 'Введите ник'; return; }
+                const password = passwordInput.value;
+                const color = colorInput.value;
+                if (!nickname || !password) { errorMsg.textContent = 'Заполните все поля'; return; }
                 if (!socket) connect();
-                socket.emit('set nickname', { nickname, color: colorInput.value }, (res) => {
-                    if (res.success) errorMsg.textContent = '';
-                    else { errorMsg.textContent = res.message; socket.disconnect(); socket = null; }
+                const eventName = registerMode ? 'register' : 'login';
+                socket.emit(eventName, { nickname, password, color }, (res) => {
+                    if (res.success) {
+                        errorMsg.textContent = '';
+                        if (!registerMode) {
+                            // После логина сервер пришлёт init
+                        } else {
+                            // После регистрации автоматически входим
+                            socket.emit('login', { nickname, password }, (res2) => {
+                                if (!res2.success) errorMsg.textContent = res2.message;
+                            });
+                        }
+                    } else {
+                        errorMsg.textContent = res.message;
+                    }
                 });
             }
-            joinBtn.addEventListener('click', tryJoin);
-            nicknameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') tryJoin(); });
+            joinBtn.addEventListener('click', tryAuth);
+            nicknameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') tryAuth(); });
+            passwordInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') tryAuth(); });
+            toggleMode.addEventListener('click', () => {
+                registerMode = !registerMode;
+                joinBtn.textContent = registerMode ? 'Зарегистрироваться' : 'Войти';
+                toggleMode.textContent = registerMode ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться';
+            });
 
             // ---------- Управление ПК ----------
             window.addEventListener('keydown', (e) => {
-                if (chatOpen || inventoryOpen) return;
+                if (chatOpen || inventoryOpen) {
+                    if (e.code === 'Escape') { closeChat(); e.preventDefault(); }
+                    return;
+                }
                 if (e.code in keyState) { keyState[e.code] = true; e.preventDefault(); }
                 if (e.code === 'KeyE') { inventoryOpen = !inventoryOpen; renderInventoryWindow(); e.preventDefault(); }
                 if (e.code === 'KeyF') { performAttack(); e.preventDefault(); }
                 if (e.code === 'Enter') { openChat(); e.preventDefault(); }
-                if (e.code === 'Backquote') { openConsole(); e.preventDefault(); }
+                if (e.code === 'Backquote') { openChat(true); e.preventDefault(); }
                 if (!isNaN(parseInt(e.key)) && e.key >= '1' && e.key <= '9') { selectSlot(parseInt(e.key)-1); e.preventDefault(); }
                 if (e.code === 'Escape' && inventoryOpen) { inventoryOpen = false; renderInventoryWindow(); }
             });
@@ -468,8 +458,30 @@
             canvas.addEventListener('mousedown', (e) => { if (e.button === 0) performAttackFromEvent(e); });
             canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
+            function closeChat() {
+                chatOpen = false;
+                chatInputContainer.style.display = 'none';
+                chatInput.value = '';
+            }
+            function openChat(asConsole = false) {
+                chatOpen = true;
+                chatInputContainer.style.display = 'block';
+                chatInput.value = asConsole ? '/' : '';
+                chatInput.focus();
+            }
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const text = chatInput.value.trim();
+                    if (text) {
+                        socket.emit('chat message', text);
+                    }
+                    closeChat();
+                }
+                if (e.key === 'Escape') closeChat();
+            });
+
             // ---------- Мобильное управление ----------
-            function setupJoystick() {
+            (function setupJoystick() {
                 joystickArea.addEventListener('touchstart', (e) => { e.preventDefault(); joystickActive = true; updateJoystick(e.touches[0]); });
                 joystickArea.addEventListener('touchmove', (e) => { e.preventDefault(); if (joystickActive) updateJoystick(e.touches[0]); });
                 joystickArea.addEventListener('touchend', (e) => { e.preventDefault(); joystickActive = false; joystickVector = { x:0, y:0 }; joystickThumb.style.transform = 'translate(0,0)'; });
@@ -482,8 +494,7 @@
                     joystickThumb.style.transform = `translate(${dx}px, ${dy}px)`;
                     joystickVector = { x: dx/max, y: dy/max };
                 }
-            }
-            setupJoystick();
+            })();
             attackMobileBtn.addEventListener('touchstart', (e) => { e.preventDefault(); performAttack(); });
             inventoryMobileBtn.addEventListener('touchstart', (e) => { e.preventDefault(); inventoryOpen = !inventoryOpen; renderInventoryWindow(); });
             chatMobileBtn.addEventListener('touchstart', (e) => { e.preventDefault(); openChat(); });
@@ -497,8 +508,7 @@
                     if (id === selfPlayer.id) continue;
                     const p = players[id];
                     const dx = p.x - selfPlayer.x, dy = p.y - selfPlayer.y;
-                    const dot = dx*dir.x + dy*dir.y;
-                    if (dot < 0) continue;
+                    if (dx*dir.x + dy*dir.y < 0) continue;
                     const dist = Math.hypot(dx, dy);
                     if (dist < minDist) { minDist = dist; closest = id; }
                 }
@@ -529,30 +539,6 @@
                 if (dx===0&&dy===0) return {x:1,y:0};
                 const l = Math.sqrt(dx*dx+dy*dy); return {x:dx/l, y:dy/l};
             }
-
-            // ---------- Чат и консоль ----------
-            function openChat() {
-                chatOpen = true; consoleMode = false;
-                chatInputContainer.style.display = 'block';
-                chatInput.value = ''; chatInput.focus();
-            }
-            function openConsole() {
-                chatOpen = true; consoleMode = true;
-                chatInputContainer.style.display = 'block';
-                chatInput.value = '/'; chatInput.focus();
-            }
-            chatInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    const text = chatInput.value.trim();
-                    if (text) {
-                        if (text.startsWith('/')) socket.emit('admin command', { password: text.split(' ')[0].substring(1), command: text });
-                        else socket.emit('chat message', text);
-                    }
-                    chatInputContainer.style.display = 'none';
-                    chatOpen = false; consoleMode = false;
-                }
-                if (e.key === 'Escape') { chatInputContainer.style.display = 'none'; chatOpen = false; }
-            });
 
             // ---------- Движение и рендеринг ----------
             function handleInput() {
@@ -594,14 +580,13 @@
                 ctx.clearRect(0,0,canvas.width,canvas.height);
                 ctx.save(); ctx.translate(-camera.x, -camera.y);
                 
-                // Отрисовка блоков (трава)
+                // Блоки
                 if (worldTiles) {
                     for (let tx = 0; tx < worldTiles.length; tx++) {
                         for (let ty = 0; ty < worldTiles[tx].length; ty++) {
                             const block = worldTiles[tx][ty];
                             if (block) {
                                 const x = tx * tileSize, y = ty * tileSize;
-                                // Простой frustum culling
                                 if (x + tileSize < camera.x || x > camera.x + canvas.width ||
                                     y + tileSize < camera.y || y > camera.y + canvas.height) continue;
                                 ctx.fillStyle = '#5d4a2e';
@@ -630,7 +615,6 @@
                 for (const id in players) {
                     const p = players[id];
                     if (p.x+30 < camera.x || p.x-30 > camera.x+canvas.width || p.y+30 < camera.y || p.y-30 > camera.y+canvas.height) continue;
-                    
                     ctx.shadowColor = '#00000060'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
                     ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, 2*Math.PI);
                     const grad = ctx.createRadialGradient(p.x-5,p.y-5,3,p.x,p.y,18);
@@ -645,7 +629,6 @@
                     ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
                     ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
 
-                    // HP бар
                     const hpPercent = p.hp / p.maxHp;
                     ctx.fillStyle = '#333'; ctx.fillRect(p.x-25, p.y-40, 50, 6);
                     ctx.fillStyle = hpPercent>0.6?'#2ecc71':'#e74c3c';
@@ -655,7 +638,6 @@
                     ctx.fillText(p.nickname, p.x, p.y-48);
                 }
                 ctx.restore();
-
                 if (selfPlayer) coordsDiv.textContent = `📍 ${Math.round(selfPlayer.x)} ${Math.round(selfPlayer.y)}`;
             }
             function updatePlayersList() {
