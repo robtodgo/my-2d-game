@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2D Survival Sandbox</title>
+    <title>2D Survival — Fixed</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         body {
@@ -271,7 +271,7 @@
             let camera = { x: 0, y: 0 };
             let worldTiles = [];
 
-            // Предсказание движения
+            // Предсказание движения (анти-откат)
             let clientPredictedX = 0, clientPredictedY = 0;
             let serverConfirmedX = 0, serverConfirmedY = 0;
 
@@ -292,7 +292,7 @@
 
             // Чат и консоль
             let chatOpen = false;
-            let consoleMode = false; // true если ввод начинается с '/'
+            let consoleMode = false;
             let isAdmin = false;
 
             // Статистика
@@ -343,7 +343,6 @@
                     }
                     slot.addEventListener('click', (e) => {
                         if (e.shiftKey) {
-                            // Быстрый перенос в хотбар (просто меняем слоты)
                             const temp = inventory[i];
                             inventory[i] = inventory[selectedSlot];
                             inventory[selectedSlot] = temp;
@@ -594,27 +593,70 @@
             function draw() {
                 ctx.clearRect(0,0,canvas.width,canvas.height);
                 ctx.save(); ctx.translate(-camera.x, -camera.y);
-                // Блоки и сетка (сокращено для экономии места)
-                ctx.restore();
-                // Отрисовка игроков с HP-барами
+                
+                // Отрисовка блоков (трава)
+                if (worldTiles) {
+                    for (let tx = 0; tx < worldTiles.length; tx++) {
+                        for (let ty = 0; ty < worldTiles[tx].length; ty++) {
+                            const block = worldTiles[tx][ty];
+                            if (block) {
+                                const x = tx * tileSize, y = ty * tileSize;
+                                // Простой frustum culling
+                                if (x + tileSize < camera.x || x > camera.x + canvas.width ||
+                                    y + tileSize < camera.y || y > camera.y + canvas.height) continue;
+                                ctx.fillStyle = '#5d4a2e';
+                                ctx.fillRect(x, y, tileSize, tileSize);
+                                ctx.strokeStyle = '#3a2e1e';
+                                ctx.lineWidth = 1;
+                                ctx.strokeRect(x, y, tileSize, tileSize);
+                                ctx.fillStyle = '#3c8c3c';
+                                ctx.fillRect(x+2, y+2, tileSize-4, 5);
+                            }
+                        }
+                    }
+                }
+
+                // Сетка
+                ctx.strokeStyle = '#7a9a6c';
+                ctx.lineWidth = 0.5;
+                for (let i = 0; i <= mapWidth; i += tileSize) {
+                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, mapHeight); ctx.stroke();
+                }
+                for (let i = 0; i <= mapHeight; i += tileSize) {
+                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(mapWidth, i); ctx.stroke();
+                }
+
+                // Игроки
                 for (const id in players) {
                     const p = players[id];
-                    if (p.x+30<camera.x||p.x-30>camera.x+canvas.width||p.y+30<camera.y||p.y-30>camera.y+canvas.height) continue;
+                    if (p.x+30 < camera.x || p.x-30 > camera.x+canvas.width || p.y+30 < camera.y || p.y-30 > camera.y+canvas.height) continue;
+                    
+                    ctx.shadowColor = '#00000060'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
                     ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, 2*Math.PI);
                     const grad = ctx.createRadialGradient(p.x-5,p.y-5,3,p.x,p.y,18);
-                    grad.addColorStop(0, id===selfPlayer?.id?'#aad0ff':'#ffb0b0');
-                    grad.addColorStop(1, p.color||'#3498db');
+                    if (id === selfPlayer?.id) {
+                        grad.addColorStop(0, '#aad0ff');
+                        grad.addColorStop(1, p.color || '#3498db');
+                    } else {
+                        grad.addColorStop(0, '#ffb0b0');
+                        grad.addColorStop(1, p.color || '#e74c3c');
+                    }
                     ctx.fillStyle = grad; ctx.fill();
-                    ctx.strokeStyle='#fff'; ctx.lineWidth=3; ctx.stroke();
+                    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+
                     // HP бар
                     const hpPercent = p.hp / p.maxHp;
                     ctx.fillStyle = '#333'; ctx.fillRect(p.x-25, p.y-40, 50, 6);
                     ctx.fillStyle = hpPercent>0.6?'#2ecc71':'#e74c3c';
                     ctx.fillRect(p.x-25, p.y-40, 50*hpPercent, 6);
-                    ctx.font = 'bold 14px "Segoe UI"'; ctx.fillStyle='#fff'; ctx.textAlign='center';
+                    
+                    ctx.font = 'bold 14px "Segoe UI"'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
                     ctx.fillText(p.nickname, p.x, p.y-48);
                 }
-                coordsDiv.textContent = `📍 ${Math.round(selfPlayer?.x||0)} ${Math.round(selfPlayer?.y||0)}`;
+                ctx.restore();
+
+                if (selfPlayer) coordsDiv.textContent = `📍 ${Math.round(selfPlayer.x)} ${Math.round(selfPlayer.y)}`;
             }
             function updatePlayersList() {
                 playersList.innerHTML = Object.values(players).map(p => `<li>${p.nickname} ${p.id===selfPlayer?.id?'(вы)':''}</li>`).join('')||'<li>Пусто</li>';
