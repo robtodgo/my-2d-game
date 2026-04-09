@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мультиплеер 2D</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        #login-container {
+            background: #333;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            text-align: center;
+            color: white;
+        }
+        #login-container h2 { color: #4CAF50; margin-top: 0; }
+        #nickname-input {
+            padding: 10px;
+            font-size: 16px;
+            width: 200px;
+            border: none;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        #join-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #join-btn:hover { background: #45a049; }
+        #error-message { color: #ff6b6b; margin-top: 10px; min-height: 20px; }
+        #game-container { display: none; position: relative; }
+        canvas {
+            border: 2px solid #4CAF50;
+            background: #8bc34a;
+            background-image: 
+                linear-gradient(rgba(0,80,0,0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,80,0,0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            display: block;
+        }
+        #player-list {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        #player-list h3 { margin: 0 0 5px 0; color: #4CAF50; }
+        #player-list ul { margin: 0; padding-left: 20px; }
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+    <div id="login-container">
+        <h2>🎮 Вход в игру</h2>
+        <input type="text" id="nickname-input" placeholder="Введите ник" maxlength="15" autocomplete="off">
+        <br>
+        <button id="join-btn">Войти</button>
+        <div id="error-message"></div>
+    </div>
+
+    <div id="game-container">
+        <canvas id="game-canvas" width="800" height="600"></canvas>
+        <div id="player-list">
+            <h3>Игроки онлайн</h3>
+            <ul id="players-online"></ul>
+        </div>
+    </div>
+
+    <script>
+        const loginContainer = document.getElementById('login-container');
+        const gameContainer = document.getElementById('game-container');
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const nicknameInput = document.getElementById('nickname-input');
+        const joinBtn = document.getElementById('join-btn');
+        const errorMsg = document.getElementById('error-message');
+        const playersList = document.getElementById('players-online');
+
+        let socket;
+        let selfPlayer = null;
+        let players = {};
+        let mapWidth = 800, mapHeight = 600;
+        let keys = {};
+
+        function connect() {
+            socket = io();
+
+            socket.on('connect', () => console.log('Подключены к серверу'));
+
+            socket.on('init', (data) => {
+                players = data.players;
+                selfPlayer = players[socket.id]; // ссылка на объект в players
+                mapWidth = data.map.width;
+                mapHeight = data.map.height;
+
+                loginContainer.style.display = 'none';
+                gameContainer.style.display = 'block';
+                requestAnimationFrame(gameLoop);
+                updatePlayersList();
+            });
+
+            socket.on('player joined', (player) => {
+                players[player.id] = player;
+                updatePlayersList();
+            });
+
+            socket.on('player left', (id) => {
+                delete players[id];
+                updatePlayersList();
+            });
+
+            socket.on('player moved', (data) => {
+                if (players[data.id]) {
+                    players[data.id].x = data.x;
+                    players[data.id].y = data.y;
+                }
+                // Если это наш игрок, selfPlayer уже указывает на тот же объект
+            });
+        }
+
+        function tryJoin() {
+            const nickname = nicknameInput.value.trim();
+            if (!nickname) {
+                errorMsg.textContent = 'Введите ник';
+                return;
+            }
+            if (nickname.length > 15) {
+                errorMsg.textContent = 'Ник слишком длинный (макс 15)';
+                return;
+            }
+
+            if (!socket) connect();
+
+            socket.emit('set nickname', nickname, (response) => {
+                if (response.success) {
+                    errorMsg.textContent = '';
+                } else {
+                    errorMsg.textContent = response.message;
+                    socket.disconnect();
+                    socket = null;
+                }
+            });
+        }
+
+        joinBtn.addEventListener('click', tryJoin);
+        nicknameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') tryJoin();
+        });
+
+        window.addEventListener('keydown', (e) => { keys[e.key.toLowerCase()] = true; });
+        window.addEventListener('keyup', (e) => { keys[e.key.toLowerCase()] = false; });
+
+        const MOVE_SPEED = 5;
+
+        function handleInput() {
+            if (!selfPlayer) return;
+
+            let dx = 0, dy = 0;
+            if (keys['arrowup'] || keys['w']) dy -= 1;
+            if (keys['arrowdown'] || keys['s']) dy += 1;
+            if (keys['arrowleft'] || keys['a']) dx -= 1;
+            if (keys['arrowright'] || keys['d']) dx += 1;
+
+            if (dx !== 0 || dy !== 0) {
+                const length = Math.sqrt(dx*dx + dy*dy);
+                dx = (dx / length) * MOVE_SPEED;
+                dy = (dy / length) * MOVE_SPEED;
+
+                const newX = selfPlayer.x + dx;
+                const newY = selfPlayer.y + dy;
+
+                // Отправляем серверу новую позицию (сервер решит окончательно)
+                socket.emit('move', { x: newX, y: newY });
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = '#2c5e2e';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(20, 20, mapWidth - 40, mapHeight - 40);
+
+            for (const id in players) {
+                const p = players[id];
+                const isSelf = (id === selfPlayer?.id);
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 15, 0, 2 * Math.PI);
+                ctx.fillStyle = isSelf ? '#3498db' : '#e74c3c';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.font = 'bold 14px Arial';
+                ctx.fillStyle = '#fff';
+                ctx.shadowColor = '#000';
+                ctx.shadowBlur = 4;
+                ctx.textAlign = 'center';
+                ctx.fillText(p.nickname, p.x, p.y - 25);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function updatePlayersList() {
+            const list = Object.values(players).map(p => 
+                `<li>${p.nickname} ${p.id === selfPlayer?.id ? '(вы)' : ''}</li>`
+            ).join('');
+            playersList.innerHTML = list || '<li>Пусто</li>';
+        }
+
+        function gameLoop() {
+            handleInput();
+            draw();
+            updatePlayersList();
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('beforeunload', () => {
+            if (socket) socket.disconnect();
+        });
+    </script>
+</body>
+</html>
