@@ -3,57 +3,212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2D Survival · Аватары</title>
+    <title>2D Survival · Friends & Menu</title>
     <style>
         * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
-        body { margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, sans-serif; background: #1a1e2c; display: flex; justify-content: center; align-items: center; min-height: 100vh; touch-action: none; }
-        #login-container { background: #2a2f42; padding: 30px; border-radius: 12px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); text-align: center; color: #e0e5f0; max-width: 90vw; width: 360px; }
-        #login-container h2 { color: #6c9eff; margin-top: 0; }
-        .input-field { padding: 10px 15px; font-size: 16px; width: 100%; border: none; border-radius: 6px; background: #1e2332; color: white; margin: 10px 0; outline: 1px solid #3e4a6b; }
-        #color-picker { margin: 10px 0; }
-        #color-picker label { display: block; margin-bottom: 5px; color: #b0bbd5; }
-        .btn { padding: 12px 28px; font-size: 18px; font-weight: bold; background: #6c9eff; color: white; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; margin-top: 10px; width: 100%; }
+        body {
+            margin: 0; padding: 0;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #1a1e2c;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh;
+            touch-action: none;
+        }
+        /* ----- Главное меню ----- */
+        #main-menu {
+            background: #2a2f42; padding: 30px; border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5); text-align: center;
+            color: #e0e5f0; max-width: 90vw; width: 380px;
+        }
+        #main-menu h2 { color: #6c9eff; margin-top: 0; }
+        .input-field {
+            padding: 10px 15px; font-size: 16px; width: 100%;
+            border: none; border-radius: 6px;
+            background: #1e2332; color: white; margin: 10px 0;
+            outline: 1px solid #3e4a6b;
+        }
+        .btn {
+            padding: 12px 28px; font-size: 18px; font-weight: bold;
+            background: #6c9eff; color: white; border: none;
+            border-radius: 8px; cursor: pointer; transition: 0.2s;
+            margin-top: 10px; width: 100%;
+        }
         .btn:hover { background: #5a8af0; }
+        .btn-secondary {
+            background: #4a5a7a;
+        }
+        .btn-secondary:hover { background: #5a6a8a; }
         #error-message { color: #ff7b7b; margin-top: 12px; min-height: 20px; }
         #toggle-mode { color: #6c9eff; cursor: pointer; margin-top: 15px; text-decoration: underline; }
         #avatar-picker { margin: 15px 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
         #avatar-preview { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #6c9eff; display: none; }
 
-        #game-container { display: none; position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-        canvas { display: block; width: 100%; height: 100%; object-fit: contain; background: #6a8e5a; touch-action: none; cursor: crosshair; }
+        /* ----- Игровой контейнер ----- */
+        #game-container {
+            display: none; position: relative;
+            width: 100vw; height: 100vh; overflow: hidden;
+        }
+        canvas {
+            display: block; width: 100%; height: 100%;
+            object-fit: contain; background: #6a8e5a;
+            touch-action: none; cursor: crosshair;
+        }
 
-        #ui-overlay { position: absolute; top: 15px; right: 15px; background: rgba(30,34,50,0.85); backdrop-filter: blur(4px); color: #e0e5f0; padding: 10px 14px; border-radius: 8px; font-size: 14px; max-height: 220px; overflow-y: auto; border: 1px solid #4a5a7a; pointer-events: none; z-index: 10; }
-        #health-bar-container { position: absolute; top: 15px; left: 15px; width: 200px; height: 20px; background: #3a2a2a; border-radius: 10px; border: 2px solid #5a3a3a; overflow: hidden; z-index: 10; }
+        /* ----- Игровое меню (ESC) ----- */
+        #pause-menu {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: #2a2f42ee; backdrop-filter: blur(8px);
+            border: 2px solid #6c9eff; border-radius: 16px;
+            padding: 25px; width: 300px; text-align: center;
+            display: none; z-index: 100; color: white;
+        }
+        #pause-menu h3 { margin-top: 0; color: #6c9eff; }
+        #pause-menu .btn { margin: 8px 0; }
+
+        /* ----- UI элементы ----- */
+        #ui-overlay {
+            position: absolute; top: 15px; right: 15px;
+            background: rgba(30,34,50,0.85); backdrop-filter: blur(4px);
+            color: #e0e5f0; padding: 10px 14px; border-radius: 8px;
+            font-size: 14px; max-height: 220px; overflow-y: auto;
+            border: 1px solid #4a5a7a; pointer-events: none; z-index: 10;
+        }
+        #health-bar-container {
+            position: absolute; top: 15px; left: 15px;
+            width: 200px; height: 20px; background: #3a2a2a;
+            border-radius: 10px; border: 2px solid #5a3a3a;
+            overflow: hidden; z-index: 10;
+        }
         #health-bar-fill { height: 100%; width: 100%; background: #e74c3c; }
-        #health-text { position: absolute; top: 15px; left: 220px; color: white; font-weight: bold; text-shadow: 1px 1px 2px black; z-index: 10; }
-        #ping-fps { position: absolute; bottom: 15px; left: 15px; background: rgba(30,34,50,0.7); color: #aab5d0; padding: 5px 12px; border-radius: 20px; font-size: 13px; pointer-events: none; z-index: 10; }
-        #coords { position: absolute; bottom: 15px; right: 15px; background: rgba(30,34,50,0.7); color: #aab5d0; padding: 5px 12px; border-radius: 20px; font-size: 13px; pointer-events: none; z-index: 10; }
-        #version-tag { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.4); color: #aaa; padding: 3px 12px; border-radius: 20px; font-size: 12px; pointer-events: none; z-index: 10; }
+        #health-text {
+            position: absolute; top: 15px; left: 220px;
+            color: white; font-weight: bold; text-shadow: 1px 1px 2px black;
+            z-index: 10;
+        }
+        #ping-fps {
+            position: absolute; bottom: 15px; left: 15px;
+            background: rgba(30,34,50,0.7); color: #aab5d0;
+            padding: 5px 12px; border-radius: 20px; font-size: 13px;
+            pointer-events: none; z-index: 10;
+        }
+        #coords {
+            position: absolute; bottom: 15px; right: 15px;
+            background: rgba(30,34,50,0.7); color: #aab5d0;
+            padding: 5px 12px; border-radius: 20px; font-size: 13px;
+            pointer-events: none; z-index: 10;
+        }
+        #version-tag {
+            position: absolute; bottom: 15px; left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.4); color: #aaa;
+            padding: 3px 12px; border-radius: 20px; font-size: 12px;
+            pointer-events: none; z-index: 10;
+        }
 
-        #hotbar-container { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; background: rgba(20,25,40,0.8); backdrop-filter: blur(8px); padding: 8px 12px; border-radius: 40px; border: 1px solid #4a5a7a; z-index: 30; }
-        .hotbar-slot { width: 50px; height: 50px; background: #2a3348; border: 2px solid #5a6a8a; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; text-shadow: 1px 1px 2px black; transition: 0.1s; box-shadow: inset 0 0 5px #00000050; cursor: pointer; position: relative; }
+        /* Хотбар */
+        #hotbar-container {
+            position: absolute; bottom: 20px; left: 50%;
+            transform: translateX(-50%); display: flex; gap: 6px;
+            background: rgba(20,25,40,0.8); backdrop-filter: blur(8px);
+            padding: 8px 12px; border-radius: 40px;
+            border: 1px solid #4a5a7a; z-index: 30;
+        }
+        .hotbar-slot {
+            width: 50px; height: 50px; background: #2a3348;
+            border: 2px solid #5a6a8a; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: white; text-shadow: 1px 1px 2px black;
+            transition: 0.1s; box-shadow: inset 0 0 5px #00000050;
+            cursor: pointer; position: relative;
+        }
         .hotbar-slot.selected { border-color: #ffd966; background: #3e4e6e; }
         .hotbar-slot .item-count { position: absolute; bottom: 2px; right: 4px; font-size: 12px; }
 
-        #inventory-window { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; background: #2a2f42dd; backdrop-filter: blur(8px); border: 2px solid #6c9eff; border-radius: 16px; padding: 20px; display: none; grid-template-columns: repeat(5, 1fr); gap: 8px; z-index: 50; }
-        .inventory-slot { aspect-ratio: 1/1; background: #1e2332; border: 2px solid #4a5a7a; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; cursor: pointer; position: relative; }
+        /* Инвентарь */
+        #inventory-window {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 400px; background: #2a2f42dd; backdrop-filter: blur(8px);
+            border: 2px solid #6c9eff; border-radius: 16px; padding: 20px;
+            display: none; grid-template-columns: repeat(5, 1fr); gap: 8px; z-index: 50;
+        }
+        .inventory-slot {
+            aspect-ratio: 1/1; background: #1e2332; border: 2px solid #4a5a7a;
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: white; cursor: pointer; position: relative;
+        }
 
-        #chat-box { position: absolute; bottom: 130px; left: 20px; width: 300px; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.5); color: white; border-radius: 8px; padding: 8px; font-size: 14px; pointer-events: none; z-index: 40; }
-        #chat-input-container { position: absolute; bottom: 100px; left: 20px; width: 300px; display: none; z-index: 45; }
-        #chat-input { width: 100%; padding: 8px; border-radius: 8px; background: #1e2332; border: 1px solid #6c9eff; color: white; }
-        #command-hints { position: absolute; bottom: 140px; left: 20px; width: 300px; background: #1e2332dd; backdrop-filter: blur(4px); border-radius: 8px; padding: 8px; color: #ccc; font-size: 13px; display: none; z-index: 46; }
+        /* Чат */
+        #chat-box {
+            position: absolute; bottom: 130px; left: 20px;
+            width: 300px; max-height: 200px; overflow-y: auto;
+            background: rgba(0,0,0,0.5); color: white;
+            border-radius: 8px; padding: 8px; font-size: 14px;
+            pointer-events: none; z-index: 40;
+        }
+        #chat-input-container {
+            position: absolute; bottom: 100px; left: 20px;
+            width: 300px; display: none; z-index: 45;
+        }
+        #chat-input {
+            width: 100%; padding: 8px; border-radius: 8px;
+            background: #1e2332; border: 1px solid #6c9eff; color: white;
+        }
+        #command-hints {
+            position: absolute; bottom: 140px; left: 20px;
+            width: 300px; background: #1e2332dd; backdrop-filter: blur(4px);
+            border-radius: 8px; padding: 8px; color: #ccc; font-size: 13px;
+            display: none; z-index: 46;
+        }
         .hint-item { padding: 4px 8px; cursor: pointer; border-radius: 4px; }
         .hint-item:hover { background: #3e4a6b; }
 
-        #profile-search-btn { position: absolute; top: 15px; right: 220px; background: #2a2f42; border: 1px solid #6c9eff; color: white; border-radius: 20px; padding: 5px 12px; font-size: 14px; cursor: pointer; z-index: 20; backdrop-filter: blur(4px); }
-        #profile-search-panel { position: absolute; top: 60px; right: 15px; background: #2a2f42ee; backdrop-filter: blur(8px); border: 1px solid #6c9eff; border-radius: 12px; padding: 15px; display: none; z-index: 50; width: 250px; }
-        #profile-search-input { width: 100%; padding: 8px; border-radius: 6px; background: #1e2332; border: 1px solid #4a5a7a; color: white; margin-bottom: 8px; }
-        #profile-result { color: #b0bbd5; font-size: 14px; margin-top: 8px; }
+        /* Друзья */
+        #friends-btn {
+            position: absolute; top: 15px; right: 220px;
+            background: #2a2f42; border: 1px solid #6c9eff; color: white;
+            border-radius: 20px; padding: 5px 12px; font-size: 14px;
+            cursor: pointer; z-index: 20; backdrop-filter: blur(4px);
+        }
+        #friends-panel {
+            position: absolute; top: 60px; right: 15px;
+            background: #2a2f42ee; backdrop-filter: blur(8px);
+            border: 1px solid #6c9eff; border-radius: 12px; padding: 15px;
+            display: none; z-index: 50; width: 250px; color: white;
+        }
+        #friends-list { list-style: none; padding: 0; margin: 10px 0; }
+        #friends-list li { padding: 5px; border-bottom: 1px solid #4a5a7a; display: flex; justify-content: space-between; }
+        .online-dot { width: 10px; height: 10px; border-radius: 50%; background: #2ecc71; display: inline-block; margin-right: 5px; }
 
-        #mobile-controls { position: absolute; bottom: 90px; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 20px; pointer-events: none; z-index: 20; }
-        #joystick-area { width: 140px; height: 140px; background: rgba(20,25,40,0.4); border-radius: 70px; backdrop-filter: blur(8px); border: 2px solid rgba(255,255,255,0.25); pointer-events: auto; touch-action: none; position: relative; }
-        #joystick-thumb { position: absolute; width: 70px; height: 70px; background: rgba(108,158,255,0.7); border-radius: 35px; left: 35px; top: 35px; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none; }
-        .mobile-btn { width: 80px; height: 80px; border-radius: 40px; background: rgba(200,70,70,0.7); backdrop-filter: blur(8px); border: 3px solid rgba(255,255,255,0.5); color: white; font-weight: bold; font-size: 20px; display: flex; align-items: center; justify-content: center; pointer-events: auto; touch-action: none; box-shadow: 0 4px 15px rgba(0,0,0,0.4); margin-bottom: 10px; }
+        /* Мобильные кнопки */
+        #mobile-controls {
+            position: absolute; bottom: 90px; left: 0; right: 0;
+            display: flex; justify-content: space-between;
+            align-items: flex-end; padding: 0 20px;
+            pointer-events: none; z-index: 20;
+        }
+        #joystick-area {
+            width: 140px; height: 140px;
+            background: rgba(20,25,40,0.4); border-radius: 70px;
+            backdrop-filter: blur(8px); border: 2px solid rgba(255,255,255,0.25);
+            pointer-events: auto; touch-action: none; position: relative;
+        }
+        #joystick-thumb {
+            position: absolute; width: 70px; height: 70px;
+            background: rgba(108,158,255,0.7); border-radius: 35px;
+            left: 35px; top: 35px; border: 3px solid white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none;
+        }
+        .mobile-btn {
+            width: 80px; height: 80px; border-radius: 40px;
+            background: rgba(200,70,70,0.7); backdrop-filter: blur(8px);
+            border: 3px solid rgba(255,255,255,0.5);
+            color: white; font-weight: bold; font-size: 20px;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: auto; touch-action: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            margin-bottom: 10px;
+        }
         .mobile-btn:active { transform: scale(0.95); }
 
         @media (pointer: fine) { #mobile-controls { display: none; } }
@@ -62,25 +217,36 @@
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
-    <div id="login-container">
+    <!-- Главное меню (вход/регистрация) -->
+    <div id="main-menu">
         <h2>🎮 2D Survival</h2>
         <input type="text" id="nickname-input" class="input-field" placeholder="Логин (макс. 12)" maxlength="12" autocomplete="off">
         <input type="password" id="password-input" class="input-field" placeholder="Пароль" autocomplete="off">
         <div id="color-picker"><label>Цвет (если нет аватара):</label><input type="color" id="player-color" value="#3498db"></div>
         <div id="avatar-picker">
-            <label>Аватар (необязательно):</label>
+            <label>Аватар:</label>
             <input type="file" id="avatar-input" accept="image/*">
             <img id="avatar-preview" src="" alt="preview">
         </div>
         <button class="btn" id="join-btn">Войти</button>
         <div id="error-message"></div>
         <div id="toggle-mode">Нет аккаунта? Зарегистрироваться</div>
-        <div style="margin-top:15px; color:#8a9bb5; font-size:13px;">WASD/Стрелки | E-инвентарь | Enter-чат | ~-консоль | F-атака</div>
+        <button class="btn btn-secondary" id="settings-btn" style="margin-top:20px;">⚙️ Настройки</button>
     </div>
 
+    <!-- Игровой контейнер -->
     <div id="game-container">
         <canvas id="game-canvas" width="800" height="600"></canvas>
         
+        <!-- Игровое меню (ESC) -->
+        <div id="pause-menu">
+            <h3>Пауза</h3>
+            <button class="btn" id="resume-btn">Продолжить</button>
+            <button class="btn btn-secondary" id="logout-btn">Выйти из аккаунта</button>
+            <button class="btn btn-secondary" id="exit-to-menu-btn">Главное меню</button>
+        </div>
+
+        <!-- UI элементы -->
         <div id="ui-overlay">
             <div id="player-list"><h3>👥 Игроки</h3><ul id="players-online"></ul></div>
         </div>
@@ -88,13 +254,15 @@
         <div id="health-text">❤️ 100/100</div>
         <div id="ping-fps">🔌 Подключение...</div>
         <div id="coords">x: 0, y: 0</div>
-        <div id="version-tag">v2.2.0 · Avatar update</div>
+        <div id="version-tag">v3.0 · Friends</div>
 
-        <button id="profile-search-btn">🔍 Поиск профиля</button>
-        <div id="profile-search-panel">
-            <input type="text" id="profile-search-input" placeholder="Введите ник" maxlength="12">
-            <button class="btn" id="profile-search-submit" style="padding:8px;">Найти</button>
-            <div id="profile-result"></div>
+        <button id="friends-btn">👥 Друзья</button>
+        <div id="friends-panel">
+            <h4>Друзья</h4>
+            <ul id="friends-list"></ul>
+            <input type="text" id="friend-nick-input" placeholder="Ник друга" maxlength="12" style="width:100%; padding:5px; border-radius:5px; border:none; background:#1e2332; color:white;">
+            <button class="btn" id="add-friend-btn" style="padding:5px; font-size:14px;">Добавить</button>
+            <button class="btn btn-secondary" id="close-friends-btn" style="padding:5px; font-size:14px;">Закрыть</button>
         </div>
 
         <div id="hotbar-container"></div>
@@ -117,8 +285,8 @@
     <script>
         (function(){
             "use strict";
-            // ---------- DOM ----------
-            const loginContainer = document.getElementById('login-container');
+            // ---------- DOM элементы ----------
+            const mainMenu = document.getElementById('main-menu');
             const gameContainer = document.getElementById('game-container');
             const canvas = document.getElementById('game-canvas');
             const ctx = canvas.getContext('2d');
@@ -130,6 +298,11 @@
             const joinBtn = document.getElementById('join-btn');
             const errorMsg = document.getElementById('error-message');
             const toggleMode = document.getElementById('toggle-mode');
+            const settingsBtn = document.getElementById('settings-btn');
+            const pauseMenu = document.getElementById('pause-menu');
+            const resumeBtn = document.getElementById('resume-btn');
+            const logoutBtn = document.getElementById('logout-btn');
+            const exitToMenuBtn = document.getElementById('exit-to-menu-btn');
             const playersList = document.getElementById('players-online');
             const healthFill = document.getElementById('health-bar-fill');
             const healthText = document.getElementById('health-text');
@@ -141,18 +314,19 @@
             const chatInputContainer = document.getElementById('chat-input-container');
             const chatInput = document.getElementById('chat-input');
             const commandHints = document.getElementById('command-hints');
-            const profileSearchBtn = document.getElementById('profile-search-btn');
-            const profileSearchPanel = document.getElementById('profile-search-panel');
-            const profileSearchInput = document.getElementById('profile-search-input');
-            const profileSearchSubmit = document.getElementById('profile-search-submit');
-            const profileResult = document.getElementById('profile-result');
+            const friendsBtn = document.getElementById('friends-btn');
+            const friendsPanel = document.getElementById('friends-panel');
+            const friendsList = document.getElementById('friends-list');
+            const friendNickInput = document.getElementById('friend-nick-input');
+            const addFriendBtn = document.getElementById('add-friend-btn');
+            const closeFriendsBtn = document.getElementById('close-friends-btn');
             const joystickArea = document.getElementById('joystick-area');
             const joystickThumb = document.getElementById('joystick-thumb');
             const attackMobileBtn = document.getElementById('attack-mobile-btn');
             const inventoryMobileBtn = document.getElementById('inventory-mobile-btn');
             const chatMobileBtn = document.getElementById('chat-mobile-btn');
 
-            // ---------- Состояние ----------
+            // ---------- Глобальное состояние ----------
             let socket;
             let selfPlayer = null;
             let players = {};
@@ -173,8 +347,9 @@
             let chatOpen = false, isAdmin = false, registerMode = false;
             let latency = 0, fps = 60, lastPingTime = 0, frameCount = 0, lastFpsUpdate = performance.now();
             let avatarDataURL = null;
+            let friends = [];
 
-            const availableCommands = ['/find', '/profile', '/tp', '/help', '/op', '/give', '/setblock'];
+            const availableCommands = ['/find', '/profile', '/tp', '/help', '/friend add', '/friend accept', '/friend list', '/op', '/give', '/setblock'];
 
             // ---------- Аватар ----------
             avatarInput.addEventListener('change', (e) => {
@@ -186,8 +361,7 @@
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         canvas.width = 64; canvas.height = 64;
-                        const ctx2d = canvas.getContext('2d');
-                        ctx2d.drawImage(img, 0, 0, 64, 64);
+                        canvas.getContext('2d').drawImage(img, 0, 0, 64, 64);
                         avatarDataURL = canvas.toDataURL('image/png');
                         avatarPreview.src = avatarDataURL;
                         avatarPreview.style.display = 'inline-block';
@@ -259,6 +433,18 @@
                 healthFill.style.width = percent + '%';
                 healthText.textContent = `❤️ ${selfPlayer.hp}/${selfPlayer.maxHp}`;
             }
+            function updateFriendsList() {
+                friendsList.innerHTML = friends.map(f => {
+                    const online = Object.values(players).some(p => p.nickname === f);
+                    return `<li><span><span class="online-dot" style="background:${online?'#2ecc71':'#95a5a6'};"></span>${f}</span> <button data-nick="${f}" class="friend-tp-btn" style="background:none;border:none;color:#6c9eff;cursor:pointer;">➡️</button></li>`;
+                }).join('');
+                document.querySelectorAll('.friend-tp-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const nick = btn.dataset.nick;
+                        socket.emit('chat message', '/tp ' + nick);
+                    });
+                });
+            }
 
             // ---------- Сеть ----------
             function connect() {
@@ -275,19 +461,22 @@
                     selectedSlot = selfPlayer.selectedSlot || 0;
                     clientPredictedX = serverConfirmedX = selfPlayer.x;
                     clientPredictedY = serverConfirmedY = selfPlayer.y;
+                    friends = data.friends || [];
                     for (const id in players) if (id !== selfPlayer.id) interpolatedPositions[id] = { x: players[id].x, y: players[id].y };
-                    loginContainer.style.display = 'none';
+                    mainMenu.style.display = 'none';
                     gameContainer.style.display = 'block';
+                    pauseMenu.style.display = 'none';
                     createHotbar();
                     updateHealthDisplay();
                     updateCamera();
+                    updateFriendsList();
                     requestAnimationFrame(gameLoop);
                     updatePlayersList();
                     lastPingTime = performance.now(); socket.emit('ping');
                     addChatMessage('📢', 'Добро пожаловать! /help — список команд');
                 });
-                socket.on('player joined', (p) => { players[p.id] = p; interpolatedPositions[p.id] = { x: p.x, y: p.y }; updatePlayersList(); });
-                socket.on('player left', (id) => { delete players[id]; delete interpolatedPositions[id]; updatePlayersList(); });
+                socket.on('player joined', (p) => { players[p.id] = p; interpolatedPositions[p.id] = { x: p.x, y: p.y }; updatePlayersList(); updateFriendsList(); });
+                socket.on('player left', (id) => { delete players[id]; delete interpolatedPositions[id]; updatePlayersList(); updateFriendsList(); });
                 socket.on('player moved', (data) => {
                     const p = players[data.id]; if (!p) return;
                     if (data.id === selfPlayer?.id) {
@@ -306,11 +495,21 @@
                 socket.on('block update', (data) => { if (worldTiles[data.tileX]) worldTiles[data.tileX][data.tileY] = data.block; });
                 socket.on('chat message', (data) => addChatMessage(data.sender, data.text));
                 socket.on('admin status', (status) => { isAdmin = status; addChatMessage('🔓', status ? 'Права администратора' : 'Неверный пароль'); });
+                socket.on('friend request', (data) => { addChatMessage('📨', `Заявка в друзья от ${data.from}. /friend accept ${data.from}`); });
+                socket.on('friend accepted', (data) => { addChatMessage('✅', `${data.by} принял заявку в друзья`); });
+                socket.on('friends update', (list) => { friends = list; updateFriendsList(); });
+                socket.on('logged out', () => { showMainMenu(); });
                 socket.on('pong', () => { latency = Math.round(performance.now() - lastPingTime); updatePingFps(); });
                 setInterval(() => { if (socket?.connected) { lastPingTime = performance.now(); socket.emit('ping'); } }, 2000);
             }
 
-            // ---------- Вход / Регистрация ----------
+            function showMainMenu() {
+                gameContainer.style.display = 'none';
+                mainMenu.style.display = 'block';
+                pauseMenu.style.display = 'none';
+            }
+
+            // ---------- Аутентификация ----------
             function tryAuth() {
                 const nickname = nicknameInput.value.trim().substring(0,12);
                 const password = passwordInput.value;
@@ -333,9 +532,26 @@
                 toggleMode.textContent = registerMode ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться';
             });
 
+            // ---------- Меню паузы ----------
+            function openPauseMenu() { pauseMenu.style.display = 'block'; }
+            resumeBtn.addEventListener('click', () => pauseMenu.style.display = 'none');
+            logoutBtn.addEventListener('click', () => { socket.emit('logout'); showMainMenu(); });
+            exitToMenuBtn.addEventListener('click', () => { socket.emit('logout'); showMainMenu(); });
+            window.addEventListener('keydown', (e) => { if (e.code === 'Escape' && gameContainer.style.display === 'block') { if (pauseMenu.style.display === 'none') openPauseMenu(); else pauseMenu.style.display = 'none'; e.preventDefault(); } });
+
+            // ---------- Друзья UI ----------
+            friendsBtn.addEventListener('click', () => friendsPanel.style.display = friendsPanel.style.display === 'none' ? 'block' : 'none');
+            closeFriendsBtn.addEventListener('click', () => friendsPanel.style.display = 'none');
+            addFriendBtn.addEventListener('click', () => {
+                const nick = friendNickInput.value.trim().substring(0,12);
+                if (!nick) return;
+                socket.emit('chat message', '/friend add ' + nick);
+                friendNickInput.value = '';
+            });
+
             // ---------- Управление ПК ----------
             window.addEventListener('keydown', (e) => {
-                if (chatOpen || inventoryOpen) { if (e.code === 'Escape') { closeChat(); e.preventDefault(); } return; }
+                if (chatOpen || inventoryOpen || pauseMenu.style.display === 'block') { if (e.code === 'Escape') { closeChat(); e.preventDefault(); } return; }
                 if (e.code in keyState) { keyState[e.code] = true; e.preventDefault(); }
                 if (e.code === 'KeyE') { inventoryOpen = !inventoryOpen; renderInventoryWindow(); e.preventDefault(); }
                 if (e.code === 'KeyF') { performAttack(); e.preventDefault(); }
@@ -368,15 +584,6 @@
                 if (e.key === 'Enter') { const text = chatInput.value.trim(); if (text) socket.emit('chat message', text); closeChat(); e.preventDefault(); }
                 if (e.key === 'Escape') { closeChat(); e.preventDefault(); }
                 if (e.key === 'Tab') { e.preventDefault(); const hint = commandHints.querySelector('.hint-item'); if (hint) { chatInput.value = hint.dataset.cmd + ' '; updateCommandHints(hint.dataset.cmd); } }
-            });
-
-            // Поиск профиля
-            profileSearchBtn.addEventListener('click', () => profileSearchPanel.style.display = profileSearchPanel.style.display === 'none' ? 'block' : 'none');
-            profileSearchSubmit.addEventListener('click', () => {
-                const nick = profileSearchInput.value.trim().substring(0,12);
-                if (!nick) return;
-                socket.emit('chat message', '/profile ' + nick);
-                profileSearchPanel.style.display = 'none';
             });
 
             // ---------- Мобильное управление ----------
@@ -439,7 +646,7 @@
 
             // ---------- Движение и рендеринг ----------
             function handleInput() {
-                if (!selfPlayer || chatOpen || inventoryOpen) return;
+                if (!selfPlayer || chatOpen || inventoryOpen || pauseMenu.style.display === 'block') return;
                 let dx=0, dy=0;
                 if (keyState.KeyW||keyState.ArrowUp) dy-=1;
                 if (keyState.KeyS||keyState.ArrowDown) dy+=1;
@@ -474,6 +681,7 @@
             function draw() {
                 ctx.clearRect(0,0,canvas.width,canvas.height);
                 ctx.save(); ctx.translate(-camera.x, -camera.y);
+                // Блоки и сетка (как раньше)
                 if (worldTiles) {
                     for (let tx = 0; tx < worldTiles.length; tx++) {
                         for (let ty = 0; ty < worldTiles[tx].length; ty++) {
@@ -494,27 +702,12 @@
                 for (const id in players) {
                     const p = players[id];
                     if (p.x+30 < camera.x || p.x-30 > camera.x+canvas.width || p.y+30 < camera.y || p.y-30 > camera.y+canvas.height) continue;
-                    
-                    // Рисуем аватар или круг
                     if (p.avatar) {
-                        const img = new Image();
-                        img.src = p.avatar;
+                        const img = new Image(); img.src = p.avatar;
                         if (img.complete) {
-                            ctx.save();
-                            ctx.beginPath();
-                            ctx.arc(p.x, p.y, 18, 0, 2*Math.PI);
-                            ctx.clip();
-                            ctx.drawImage(img, p.x-18, p.y-18, 36, 36);
-                            ctx.restore();
-                        } else {
-                            img.onload = () => { /* перерисовка произойдет в следующем кадре */ };
-                            drawDefaultPlayer(p, id);
-                        }
-                    } else {
-                        drawDefaultPlayer(p, id);
-                    }
-
-                    // HP бар
+                            ctx.save(); ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, 2*Math.PI); ctx.clip(); ctx.drawImage(img, p.x-18, p.y-18, 36, 36); ctx.restore();
+                        } else drawDefaultPlayer(p, id);
+                    } else drawDefaultPlayer(p, id);
                     const hpPercent = p.hp / p.maxHp;
                     ctx.fillStyle = '#333'; ctx.fillRect(p.x-25, p.y-40, 50, 6);
                     ctx.fillStyle = hpPercent>0.6?'#2ecc71':'#e74c3c'; ctx.fillRect(p.x-25, p.y-40, 50*hpPercent, 6);
