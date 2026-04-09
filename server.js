@@ -17,18 +17,15 @@ const DEFAULT_COOLDOWN = 5000;
 const SAVE_FILE = path.join(__dirname, 'canvas.json');
 const BANS_FILE = path.join(__dirname, 'bans.json');
 
-// Хранилища
-const accounts = new Map();        // nickname -> { password, ip }
-const players = new Map();         // socket.id -> { nickname, lastDraw, ip, isAdmin }
-const onlineIPs = new Set();       // для ограничения 1 IP
-let bans = new Set();             // забаненные IP
+const accounts = new Map();
+const players = new Map();
+const onlineIPs = new Set();
+let bans = new Set();
 
-// Загрузка банов
 if (fs.existsSync(BANS_FILE)) {
     try { bans = new Set(JSON.parse(fs.readFileSync(BANS_FILE, 'utf8'))); } catch(e) {}
 }
 
-// Холст
 let canvas;
 if (fs.existsSync(SAVE_FILE)) {
     try { canvas = JSON.parse(fs.readFileSync(SAVE_FILE, 'utf8')); } catch(e) { initCanvas(); }
@@ -42,16 +39,13 @@ function initCanvas() {
 function saveCanvas() { fs.writeFileSync(SAVE_FILE, JSON.stringify(canvas)); }
 function saveBans() { fs.writeFileSync(BANS_FILE, JSON.stringify([...bans])); }
 
-// Переменная глобальной задержки (изменяется админом)
 let globalCooldown = DEFAULT_COOLDOWN;
 
 setInterval(saveCanvas, 10000);
 
 io.on('connection', (socket) => {
     const clientIp = socket.handshake.address;
-    console.log(`+ ${socket.id} (${clientIp})`);
 
-    // Проверка бана
     if (bans.has(clientIp)) {
         socket.emit('banned');
         socket.disconnect();
@@ -72,12 +66,10 @@ io.on('connection', (socket) => {
         if (!acc || acc.password !== password) return callback({ ok: false, msg: 'Неверный логин/пароль' });
         if (bans.has(acc.ip)) return callback({ ok: false, msg: 'Ваш IP забанен' });
 
-        // Проверка IP (один IP — один игрок)
         if (onlineIPs.has(clientIp)) {
             return callback({ ok: false, msg: 'С этого IP уже кто-то играет' });
         }
 
-        // Отключаем старые сессии с этим ником
         for (const [id, p] of players.entries()) {
             if (p.nickname === nickname) {
                 players.delete(id);
@@ -99,7 +91,6 @@ io.on('connection', (socket) => {
         callback({ ok: true, canvas, online: getOnlineList(), cooldown: globalCooldown });
         io.emit('online update', getOnlineList());
         io.emit('chat message', { sender: '📢', text: `${nickname} присоединился` });
-        console.log(`>> ${nickname}`);
     });
 
     socket.on('auto login', (nickname, callback) => {
@@ -141,7 +132,6 @@ io.on('connection', (socket) => {
         if (gridX < 0 || gridX >= canvas.length || gridY < 0 || gridY >= canvas[0].length)
             return callback({ ok: false, msg: 'За пределами холста' });
 
-        // Запрет ставить тот же цвет
         if (canvas[gridX][gridY] === color) {
             return callback({ ok: false, msg: 'Здесь уже такой цвет' });
         }
@@ -154,18 +144,17 @@ io.on('connection', (socket) => {
         callback({ ok: true });
     });
 
-    // Чат
     socket.on('chat message', (msg) => {
         const player = players.get(socket.id);
         if (!player) return;
         io.emit('chat message', { sender: player.nickname, text: msg });
     });
 
-    // Админ-команды (обрабатываются как чат-сообщения)
     socket.on('admin command', (cmd) => {
         const player = players.get(socket.id);
         if (!player) return;
         const args = cmd.split(' ');
+        // Пароль можно сменить здесь
         if (args[0] === '/op' && args[1] === '55332') {
             player.isAdmin = true;
             socket.emit('admin status', true);
@@ -194,7 +183,6 @@ io.on('connection', (socket) => {
                     else socket.emit('chat message', { sender: '❌', text: 'Игрок не найден' });
                 }
             } else if (args[0] === '/unban' && args[1]) {
-                // упрощённо: разбанить IP по нику
                 const acc = accounts.get(args[1]);
                 if (acc) { bans.delete(acc.ip); saveBans(); socket.emit('chat message', { sender: '🔓', text: `IP ${args[1]} разбанен` }); }
             } else if (args[0] === '/clear') {
@@ -204,10 +192,6 @@ io.on('connection', (socket) => {
             } else if (args[0] === '/kick' && args[1]) {
                 const target = [...players.entries()].find(([_, p]) => p.nickname === args[1]);
                 if (target) { io.to(target[0]).emit('force logout'); io.sockets.sockets.get(target[0])?.disconnect(); socket.emit('chat message', { sender: '👢', text: `${args[1]} кикнут` }); }
-            } else if (args[0] === '/mute' && args[1]) {
-                // мут на 60 сек для примера
-                const target = [...players.entries()].find(([_, p]) => p.nickname === args[1]);
-                if (target) { /* можно добавить флаг mute */ socket.emit('chat message', { sender: '🤐', text: `${args[1]} заглушен` }); }
             }
         }
     });
@@ -219,7 +203,6 @@ io.on('connection', (socket) => {
             players.delete(socket.id);
             io.emit('online update', getOnlineList());
             io.emit('chat message', { sender: '📢', text: `${player.nickname} вышел` });
-            console.log(`-- ${player.nickname}`);
         }
     });
 });
