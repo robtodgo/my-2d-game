@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2D Sandbox — Mobile & PC</title>
+    <title>2D Sandbox — Hotbar & Smooth</title>
     <style>
         * {
             box-sizing: border-box;
@@ -19,7 +19,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            touch-action: none;  /* предотвращаем скролл/зум на сенсоре */
+            touch-action: none;
         }
         #login-container {
             background: #2a2f42;
@@ -43,14 +43,8 @@
             margin: 15px 0;
             outline: 1px solid #3e4a6b;
         }
-        #color-picker {
-            margin: 10px 0;
-        }
-        #color-picker label {
-            display: block;
-            margin-bottom: 5px;
-            color: #b0bbd5;
-        }
+        #color-picker { margin: 10px 0; }
+        #color-picker label { display: block; margin-bottom: 5px; color: #b0bbd5; }
         #join-btn {
             padding: 12px 28px;
             font-size: 18px;
@@ -72,7 +66,6 @@
             position: relative;
             width: 100vw;
             height: 100vh;
-            max-width: 100%;
             overflow: hidden;
         }
         canvas {
@@ -84,7 +77,8 @@
             touch-action: none;
             cursor: crosshair;
         }
-        /* UI поверх canvas */
+
+        /* UI */
         #ui-overlay {
             position: absolute;
             top: 15px;
@@ -103,7 +97,7 @@
         }
         #player-list h3 { margin: 0 0 6px 0; color: #6c9eff; font-size: 16px; }
         #player-list ul { margin: 0; padding-left: 18px; }
-        #ping-info {
+        #ping-fps {
             position: absolute;
             bottom: 15px;
             left: 15px;
@@ -128,10 +122,54 @@
             z-index: 10;
         }
 
+        /* Хотбар */
+        #hotbar-container {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 6px;
+            background: rgba(20, 25, 40, 0.8);
+            backdrop-filter: blur(8px);
+            padding: 8px 12px;
+            border-radius: 40px;
+            border: 1px solid #4a5a7a;
+            z-index: 30;
+        }
+        .hotbar-slot {
+            width: 50px;
+            height: 50px;
+            background: #2a3348;
+            border: 2px solid #5a6a8a;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px black;
+            transition: 0.1s;
+            box-shadow: inset 0 0 5px #00000050;
+            cursor: pointer;
+            user-select: none;
+        }
+        .hotbar-slot.selected {
+            border-color: #ffd966;
+            background: #3e4e6e;
+            transform: scale(1.05);
+            box-shadow: 0 0 12px #ffd96680;
+        }
+        .hotbar-slot span {
+            font-size: 12px;
+            margin-left: 2px;
+        }
+
         /* Мобильные контролы */
         #mobile-controls {
             position: absolute;
-            bottom: 30px;
+            bottom: 90px;
             left: 0;
             right: 0;
             display: flex;
@@ -162,7 +200,6 @@
             top: 35px;
             border: 3px solid white;
             box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            transition: 0.05s;
             pointer-events: none;
         }
         #action-button {
@@ -182,21 +219,17 @@
             touch-action: none;
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
             margin-bottom: 10px;
-            user-select: none;
         }
         #action-button:active {
             background: rgba(220, 50, 50, 0.9);
             transform: scale(0.95);
         }
 
-        /* На ПК скрываем мобильные контролы */
         @media (pointer: fine) {
-            #mobile-controls {
-                display: none;
-            }
+            #mobile-controls { display: none; }
         }
-        /* На мобильных скрывать не нужно, но можно подстроить */
         @media (max-width: 600px) {
+            .hotbar-slot { width: 40px; height: 40px; font-size: 16px; }
             #ui-overlay { font-size: 12px; padding: 8px; }
         }
     </style>
@@ -212,21 +245,27 @@
         </div>
         <button id="join-btn">Войти в игру</button>
         <div id="error-message"></div>
-        <p style="font-size:13px; color:#8a9bb5; margin-top:15px;">ПК: WASD/стрелки + клик<br>📱: Джойстик + кнопка</p>
+        <p style="font-size:13px; color:#8a9bb5; margin-top:15px;">
+            ПК: WASD/стрелки + клик<br>📱: Джойстик + кнопка<br>1-9: хотбар
+        </p>
     </div>
 
     <div id="game-container">
         <canvas id="game-canvas" width="800" height="600"></canvas>
         
-        <!-- UI оверлеи -->
         <div id="ui-overlay">
             <div id="player-list">
                 <h3>👥 Игроки онлайн</h3>
                 <ul id="players-online"></ul>
             </div>
         </div>
-        <div id="ping-info">🔌 Подключение...</div>
+        <div id="ping-fps">🔌 Подключение...</div>
         <div id="coords">x: 0, y: 0</div>
+
+        <!-- Хотбар -->
+        <div id="hotbar-container">
+            <!-- Слоты будут сгенерированы JS -->
+        </div>
 
         <!-- Мобильные контролы -->
         <div id="mobile-controls">
@@ -251,53 +290,92 @@
             const joinBtn = document.getElementById('join-btn');
             const errorMsg = document.getElementById('error-message');
             const playersList = document.getElementById('players-online');
-            const pingInfo = document.getElementById('ping-info');
+            const pingFpsDiv = document.getElementById('ping-fps');
             const coordsDiv = document.getElementById('coords');
+            const hotbarContainer = document.getElementById('hotbar-container');
 
-            // Мобильные элементы
             const joystickArea = document.getElementById('joystick-area');
             const joystickThumb = document.getElementById('joystick-thumb');
             const actionBtn = document.getElementById('action-button');
 
-            // ---------- Глобальные переменные ----------
+            // ---------- Состояние ----------
             let socket;
             let selfPlayer = null;
             let players = {};
             let mapWidth = 2000, mapHeight = 2000, tileSize = 40;
             
-            // Камера
             let camera = { x: 0, y: 0 };
-            
-            // Карта блоков
             let worldTiles = [];
 
             // Интерполяция других игроков
             const interpolatedPositions = {};
-            const INTERP_SPEED = 0.25;
+            const INTERP_SPEED = 0.3;
 
-            // Управление ПК (code)
+            // Предсказание движения (клиентская физика)
+            let clientPredictedX = 0, clientPredictedY = 0;
+            let serverConfirmedX = 0, serverConfirmedY = 0;
+            let lastServerUpdate = 0;
+
+            // Управление ПК
             const keyState = {
                 KeyW: false, KeyA: false, KeyS: false, KeyD: false,
                 ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false
             };
             
-            // Управление мобильное
+            // Мобильное
             let joystickActive = false;
-            let joystickVector = { x: 0, y: 0 }; // от -1 до 1
-            const joystickMaxDist = 50; // радиус джойстика в пикселях
+            let joystickVector = { x: 0, y: 0 };
+            const joystickMaxDist = 50;
             let actionPressed = false;
 
-            const MOVE_SPEED = 5.5;
+            const MOVE_SPEED = 6.0;
             
-            let lastPingTime = 0;
             let latency = 0;
+            let lastPingTime = 0;
+            
+            // FPS
+            let frameCount = 0;
+            let lastFpsUpdate = performance.now();
+            let fps = 60;
+
+            // Хотбар
+            let selectedSlot = 0;
+            const hotbarSlots = [];
+            const hotbarItems = ['🪓', '⛏️', '🗡️', '🍎', '🪨', '🌳', '🔥', '💧', '📦']; // эмодзи для примера
+
+            // ---------- Хотбар UI ----------
+            function createHotbar() {
+                hotbarContainer.innerHTML = '';
+                for (let i = 0; i < 9; i++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'hotbar-slot' + (i === selectedSlot ? ' selected' : '');
+                    slot.innerHTML = hotbarItems[i] || '';
+                    slot.addEventListener('click', () => selectSlot(i));
+                    hotbarContainer.appendChild(slot);
+                    hotbarSlots.push(slot);
+                }
+            }
+            function selectSlot(index) {
+                selectedSlot = index;
+                hotbarSlots.forEach((s, i) => {
+                    s.classList.toggle('selected', i === index);
+                });
+            }
+            // Переключение клавишами 1-9
+            window.addEventListener('keydown', (e) => {
+                const num = parseInt(e.key);
+                if (!isNaN(num) && num >= 1 && num <= 9) {
+                    selectSlot(num - 1);
+                    e.preventDefault();
+                }
+            });
 
             // ---------- Сеть ----------
             function connect() {
                 socket = io({ transports: ['websocket'], upgrade: false });
 
-                socket.on('connect', () => pingInfo.textContent = '🟢 Подключено');
-                socket.on('disconnect', () => pingInfo.textContent = '🔴 Отключено');
+                socket.on('connect', () => updatePingFps());
+                socket.on('disconnect', () => updatePingFps(true));
 
                 socket.on('init', (data) => {
                     players = data.players;
@@ -307,6 +385,12 @@
                     tileSize = data.map.tileSize || 40;
                     worldTiles = data.worldTiles || [];
 
+                    // Инициализация предсказания
+                    clientPredictedX = selfPlayer.x;
+                    clientPredictedY = selfPlayer.y;
+                    serverConfirmedX = selfPlayer.x;
+                    serverConfirmedY = selfPlayer.y;
+
                     for (const id in players) {
                         if (id !== selfPlayer.id) {
                             interpolatedPositions[id] = { x: players[id].x, y: players[id].y };
@@ -315,6 +399,7 @@
 
                     loginContainer.style.display = 'none';
                     gameContainer.style.display = 'block';
+                    createHotbar();
                     
                     updateCamera();
                     requestAnimationFrame(gameLoop);
@@ -341,8 +426,15 @@
                     if (!player) return;
                     
                     if (data.id === selfPlayer?.id) {
-                        selfPlayer.x += (data.x - selfPlayer.x) * 0.35;
-                        selfPlayer.y += (data.y - selfPlayer.y) * 0.35;
+                        // Серверное подтверждение позиции
+                        serverConfirmedX = data.x;
+                        serverConfirmedY = data.y;
+                        lastServerUpdate = performance.now();
+                        // Плавно корректируем предсказанную позицию
+                        clientPredictedX += (data.x - clientPredictedX) * 0.2;
+                        clientPredictedY += (data.y - clientPredictedY) * 0.2;
+                        selfPlayer.x = clientPredictedX;
+                        selfPlayer.y = clientPredictedY;
                     } else {
                         interpolatedPositions[data.id] = { x: data.x, y: data.y };
                     }
@@ -356,7 +448,7 @@
 
                 socket.on('pong', () => {
                     latency = Math.round(performance.now() - lastPingTime);
-                    pingInfo.textContent = `📶 Пинг: ${latency} мс`;
+                    updatePingFps();
                 });
 
                 setInterval(() => {
@@ -365,6 +457,11 @@
                         socket.emit('ping');
                     }
                 }, 2000);
+            }
+
+            function updatePingFps(disconnected = false) {
+                if (disconnected) pingFpsDiv.textContent = '🔴 Отключено';
+                else pingFpsDiv.textContent = `📶 ${latency}ms | 🎮 ${fps} FPS`;
             }
 
             // ---------- Вход ----------
@@ -390,33 +487,25 @@
 
             // ---------- Управление ПК ----------
             window.addEventListener('keydown', (e) => {
-                if (e.code in keyState) {
-                    keyState[e.code] = true;
-                    e.preventDefault();
-                }
+                if (e.code in keyState) { keyState[e.code] = true; e.preventDefault(); }
                 if (e.code.startsWith('Arrow')) e.preventDefault();
             });
             window.addEventListener('keyup', (e) => {
-                if (e.code in keyState) {
-                    keyState[e.code] = false;
-                    e.preventDefault();
-                }
+                if (e.code in keyState) { keyState[e.code] = false; e.preventDefault(); }
                 if (e.code.startsWith('Arrow')) e.preventDefault();
             });
             window.addEventListener('blur', () => { for (let k in keyState) keyState[k] = false; });
 
-            // ---------- Мобильное управление (джойстик) ----------
+            // ---------- Мобильное управление ----------
             function handleJoystickStart(e) {
                 e.preventDefault();
                 joystickActive = true;
-                const touch = e.touches[0];
-                updateJoystick(touch);
+                updateJoystick(e.touches[0]);
             }
             function handleJoystickMove(e) {
                 e.preventDefault();
                 if (!joystickActive) return;
-                const touch = e.touches[0];
-                updateJoystick(touch);
+                updateJoystick(e.touches[0]);
             }
             function handleJoystickEnd(e) {
                 e.preventDefault();
@@ -424,31 +513,20 @@
                 joystickVector = { x: 0, y: 0 };
                 joystickThumb.style.transform = `translate(0px, 0px)`;
             }
-
             function updateJoystick(touch) {
                 const rect = joystickArea.getBoundingClientRect();
                 const centerX = rect.left + rect.width/2;
                 const centerY = rect.top + rect.height/2;
-                
                 let dx = touch.clientX - centerX;
                 let dy = touch.clientY - centerY;
-                
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 const maxDist = joystickMaxDist;
-                
                 if (dist > maxDist) {
                     dx = dx / dist * maxDist;
                     dy = dy / dist * maxDist;
                 }
-                
-                // Перемещаем стик
                 joystickThumb.style.transform = `translate(${dx}px, ${dy}px)`;
-                
-                // Нормализованный вектор (-1..1)
-                joystickVector = {
-                    x: dx / maxDist,
-                    y: dy / maxDist
-                };
+                joystickVector = { x: dx / maxDist, y: dy / maxDist };
             }
 
             joystickArea.addEventListener('touchstart', handleJoystickStart, {passive: false});
@@ -456,26 +534,17 @@
             joystickArea.addEventListener('touchend', handleJoystickEnd);
             joystickArea.addEventListener('touchcancel', handleJoystickEnd);
 
-            // Кнопка действия
             actionBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                actionPressed = true;
-                performAction(); // сразу ломаем блок
+                performAction();
             });
-            actionBtn.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                actionPressed = false;
-            });
-            // Для ПК клик по canvas
+
             canvas.addEventListener('mousedown', (e) => {
-                if (e.button === 0) { // левая кнопка
-                    performActionFromEvent(e);
-                }
+                if (e.button === 0) performActionFromEvent(e);
             });
 
             function performAction() {
                 if (!selfPlayer) return;
-                // Действие: разрушить блок перед игроком по направлению движения или просто ближайший
                 const dir = getDirectionVector();
                 const targetX = selfPlayer.x + dir.x * 50;
                 const targetY = selfPlayer.y + dir.y * 50;
@@ -502,7 +571,6 @@
             }
 
             function getDirectionVector() {
-                // Сначала смотрим джойстик, потом клавиши
                 if (joystickActive && (joystickVector.x !== 0 || joystickVector.y !== 0)) {
                     return { x: joystickVector.x, y: joystickVector.y };
                 }
@@ -511,24 +579,21 @@
                 if (keyState.KeyS || keyState.ArrowDown) dy += 1;
                 if (keyState.KeyA || keyState.ArrowLeft) dx -= 1;
                 if (keyState.KeyD || keyState.ArrowRight) dx += 1;
-                if (dx === 0 && dy === 0) return { x: 1, y: 0 }; // вправо по умолчанию
+                if (dx === 0 && dy === 0) return { x: 1, y: 0 };
                 const len = Math.sqrt(dx*dx + dy*dy);
                 return { x: dx/len, y: dy/len };
             }
 
-            // ---------- Движение (объединённое ПК + мобильное) ----------
+            // ---------- Движение с предсказанием и сглаживанием ----------
             function handleInput() {
                 if (!selfPlayer) return;
 
                 let dx = 0, dy = 0;
-                
-                // Клавиатура
                 if (keyState.KeyW || keyState.ArrowUp) dy -= 1;
                 if (keyState.KeyS || keyState.ArrowDown) dy += 1;
                 if (keyState.KeyA || keyState.ArrowLeft) dx -= 1;
                 if (keyState.KeyD || keyState.ArrowRight) dx += 1;
 
-                // Джойстик (если активен, приоритет выше)
                 if (joystickActive && (joystickVector.x !== 0 || joystickVector.y !== 0)) {
                     dx = joystickVector.x;
                     dy = joystickVector.y;
@@ -539,16 +604,28 @@
                     dx = (dx / len) * MOVE_SPEED;
                     dy = (dy / len) * MOVE_SPEED;
 
-                    let newX = selfPlayer.x + dx;
-                    let newY = selfPlayer.y + dy;
+                    // Предсказываем новую позицию
+                    let newX = clientPredictedX + dx;
+                    let newY = clientPredictedY + dy;
                     
                     newX = Math.max(20, Math.min(mapWidth - 20, newX));
                     newY = Math.max(20, Math.min(mapHeight - 20, newY));
                     
-                    selfPlayer.x = newX;
-                    selfPlayer.y = newY;
+                    clientPredictedX = newX;
+                    clientPredictedY = newY;
+                    
+                    // Обновляем selfPlayer для отрисовки
+                    selfPlayer.x = clientPredictedX;
+                    selfPlayer.y = clientPredictedY;
 
-                    socket.emit('move', { x: newX, y: newY });
+                    // Отправляем на сервер
+                    socket.emit('move', { x: newX, y: newY, vx: dx, vy: dy });
+                } else {
+                    // Если стоим, синхронизируем с сервером плавно
+                    clientPredictedX += (serverConfirmedX - clientPredictedX) * 0.1;
+                    clientPredictedY += (serverConfirmedY - clientPredictedY) * 0.1;
+                    selfPlayer.x = clientPredictedX;
+                    selfPlayer.y = clientPredictedY;
                 }
             }
 
@@ -570,7 +647,6 @@
 
             function draw() {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
                 ctx.save();
                 ctx.translate(-camera.x, -camera.y);
 
@@ -654,30 +730,37 @@
                 playersList.innerHTML = list || '<li>Пусто</li>';
             }
 
+            // FPS счётчик
+            function updateFps() {
+                frameCount++;
+                const now = performance.now();
+                if (now - lastFpsUpdate >= 1000) {
+                    fps = frameCount;
+                    frameCount = 0;
+                    lastFpsUpdate = now;
+                    updatePingFps();
+                }
+            }
+
             function gameLoop() {
                 handleInput();
                 interpolatePlayers();
                 updateCamera();
                 draw();
                 updatePlayersList();
+                updateFps();
                 requestAnimationFrame(gameLoop);
             }
 
             window.addEventListener('beforeunload', () => { if (socket) socket.disconnect(); });
 
-            // Ресайз canvas под экран
             function resizeCanvas() {
-                const container = gameContainer;
-                const w = container.clientWidth;
-                const h = container.clientHeight;
-                canvas.width = w;
-                canvas.height = h;
+                canvas.width = gameContainer.clientWidth;
+                canvas.height = gameContainer.clientHeight;
                 updateCamera();
             }
             window.addEventListener('resize', resizeCanvas);
-            // После показа контейнера
-            const observer = new ResizeObserver(() => { if (gameContainer.style.display !== 'none') resizeCanvas(); });
-            observer.observe(gameContainer);
+            new ResizeObserver(() => { if (gameContainer.style.display !== 'none') resizeCanvas(); }).observe(gameContainer);
 
         })();
     </script>

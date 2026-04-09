@@ -11,20 +11,18 @@ const io = socketIo(server, {
 app.use(express.static('public'));
 
 // ---------- Настройки карты ----------
-const MAP_WIDTH = 2000;          // Большая карта
+const MAP_WIDTH = 2000;
 const MAP_HEIGHT = 2000;
-const TILE_SIZE = 40;            // Размер одного блока (для будущего)
+const TILE_SIZE = 40;
 
-// Игроки
 const players = {};
 
-// ---------- Карта блоков (заготовка) ----------
-// Для простоты пока массив заполнен null (воздух). Позже можно хранить объекты блоков.
-const worldTiles = Array(MAP_WIDTH / TILE_SIZE).fill().map(() => 
-    Array(MAP_HEIGHT / TILE_SIZE).fill(null)
+// Карта блоков (заготовка)
+const worldTiles = Array(Math.floor(MAP_WIDTH / TILE_SIZE)).fill().map(() => 
+    Array(Math.floor(MAP_HEIGHT / TILE_SIZE)).fill(null)
 );
-// Пример: установим несколько блоков земли для теста
-for (let i = 10; i < 15; i++) {
+// Пример блоков
+for (let i = 10; i < 20; i++) {
     for (let j = 10; j < 15; j++) {
         if (i < MAP_WIDTH/TILE_SIZE && j < MAP_HEIGHT/TILE_SIZE)
             worldTiles[i][j] = { type: 'grass' };
@@ -36,7 +34,6 @@ function isNicknameTaken(nickname) {
 }
 
 function getRandomSpawn() {
-    // Спавн подальше от края
     return {
         x: 200 + Math.random() * (MAP_WIDTH - 400),
         y: 200 + Math.random() * (MAP_HEIGHT - 400)
@@ -61,9 +58,10 @@ io.on('connection', (socket) => {
         players[socket.id] = {
             id: socket.id,
             nickname: nickname.trim(),
-            color: color || '#3498db', // цвет по умолчанию
+            color: color || '#3498db',
             x: spawn.x,
-            y: spawn.y
+            y: spawn.y,
+            vx: 0, vy: 0       // скорость (для будущих улучшений)
         };
 
         callback({ success: true });
@@ -72,7 +70,7 @@ io.on('connection', (socket) => {
             self: players[socket.id],
             players: players,
             map: { width: MAP_WIDTH, height: MAP_HEIGHT, tileSize: TILE_SIZE },
-            worldTiles: worldTiles   // отправляем карту блоков клиенту
+            worldTiles: worldTiles
         });
 
         socket.broadcast.emit('player joined', players[socket.id]);
@@ -83,34 +81,35 @@ io.on('connection', (socket) => {
         const player = players[socket.id];
         if (!player) return;
 
-        // Принимаем новую позицию от клиента (предсказание)
         let newX = data.x;
         let newY = data.y;
+        const vx = data.vx || 0;
+        const vy = data.vy || 0;
 
-        // Границы карты
+        // Границы
         newX = Math.max(20, Math.min(MAP_WIDTH - 20, newX));
         newY = Math.max(20, Math.min(MAP_HEIGHT - 20, newY));
 
         player.x = newX;
         player.y = newY;
+        player.vx = vx;
+        player.vy = vy;
 
-        // Отправляем подтверждённую позицию всем (включая отправителя для коррекции)
+        // Отправляем всем (включая отправителя) подтверждённую позицию и скорость
         io.emit('player moved', {
             id: socket.id,
             x: player.x,
-            y: player.y
+            y: player.y,
+            vx: player.vx,
+            vy: player.vy
         });
     });
 
-    // Для будущего разрушения блоков
     socket.on('break block', (data) => {
-        // data: { tileX, tileY }
-        // Проверяем, что блок существует и игрок рядом (потом)
-        const tileX = Math.floor(data.tileX);
-        const tileY = Math.floor(data.tileY);
+        const { tileX, tileY } = data;
         if (tileX >= 0 && tileX < MAP_WIDTH/TILE_SIZE && tileY >= 0 && tileY < MAP_HEIGHT/TILE_SIZE) {
             if (worldTiles[tileX][tileY] !== null) {
-                worldTiles[tileX][tileY] = null; // разрушили
+                worldTiles[tileX][tileY] = null;
                 io.emit('block update', { tileX, tileY, block: null });
             }
         }
