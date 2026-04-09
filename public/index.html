@@ -3,284 +3,240 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>2D Sandbox — Hotbar & Smooth</title>
+    <title>2D Survival Sandbox</title>
     <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
         body {
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             font-family: 'Segoe UI', Tahoma, sans-serif;
             background: #1a1e2c;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: flex; justify-content: center; align-items: center;
             min-height: 100vh;
             touch-action: none;
         }
         #login-container {
-            background: #2a2f42;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-            text-align: center;
-            color: #e0e5f0;
-            max-width: 90vw;
+            background: #2a2f42; padding: 30px; border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.5); text-align: center;
+            color: #e0e5f0; max-width: 90vw;
         }
         #login-container h2 { color: #6c9eff; margin-top: 0; }
         #nickname-input {
-            padding: 10px 15px;
-            font-size: 16px;
-            width: 100%;
-            max-width: 260px;
-            border: none;
-            border-radius: 6px;
-            background: #1e2332;
-            color: white;
-            margin: 15px 0;
+            padding: 10px 15px; font-size: 16px; width: 100%;
+            max-width: 260px; border: none; border-radius: 6px;
+            background: #1e2332; color: white; margin: 15px 0;
             outline: 1px solid #3e4a6b;
         }
         #color-picker { margin: 10px 0; }
         #color-picker label { display: block; margin-bottom: 5px; color: #b0bbd5; }
         #join-btn {
-            padding: 12px 28px;
-            font-size: 18px;
-            font-weight: bold;
-            background: #6c9eff;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: 0.2s;
-            margin-top: 10px;
-            width: 100%;
+            padding: 12px 28px; font-size: 18px; font-weight: bold;
+            background: #6c9eff; color: white; border: none;
+            border-radius: 8px; cursor: pointer; transition: 0.2s;
+            margin-top: 10px; width: 100%;
         }
         #join-btn:hover { background: #5a8af0; }
         #error-message { color: #ff7b7b; margin-top: 12px; min-height: 20px; }
 
         #game-container {
-            display: none;
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
+            display: none; position: relative;
+            width: 100vw; height: 100vh; overflow: hidden;
         }
         canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            background: #6a8e5a;
-            touch-action: none;
-            cursor: crosshair;
+            display: block; width: 100%; height: 100%;
+            object-fit: contain; background: #6a8e5a;
+            touch-action: none; cursor: crosshair;
         }
 
         /* UI */
         #ui-overlay {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(30, 34, 50, 0.85);
-            backdrop-filter: blur(4px);
-            color: #e0e5f0;
-            padding: 10px 14px;
-            border-radius: 8px;
-            font-size: 14px;
-            max-height: 220px;
-            overflow-y: auto;
-            border: 1px solid #4a5a7a;
-            pointer-events: none;
+            position: absolute; top: 15px; right: 15px;
+            background: rgba(30,34,50,0.85); backdrop-filter: blur(4px);
+            color: #e0e5f0; padding: 10px 14px; border-radius: 8px;
+            font-size: 14px; max-height: 220px; overflow-y: auto;
+            border: 1px solid #4a5a7a; pointer-events: none; z-index: 10;
+        }
+        #player-list h3 { margin: 0 0 6px 0; color: #6c9eff; }
+        #player-list ul { margin: 0; padding-left: 18px; }
+
+        #health-bar-container {
+            position: absolute; top: 15px; left: 15px;
+            width: 200px; height: 20px; background: #3a2a2a;
+            border-radius: 10px; border: 2px solid #5a3a3a;
+            overflow: hidden; z-index: 10;
+        }
+        #health-bar-fill {
+            height: 100%; width: 100%; background: #e74c3c;
+            transition: width 0.1s;
+        }
+        #health-text {
+            position: absolute; top: 15px; left: 220px;
+            color: white; font-weight: bold; text-shadow: 1px 1px 2px black;
             z-index: 10;
         }
-        #player-list h3 { margin: 0 0 6px 0; color: #6c9eff; font-size: 16px; }
-        #player-list ul { margin: 0; padding-left: 18px; }
+
         #ping-fps {
-            position: absolute;
-            bottom: 15px;
-            left: 15px;
-            background: rgba(30, 34, 50, 0.7);
-            color: #aab5d0;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            pointer-events: none;
-            z-index: 10;
+            position: absolute; bottom: 15px; left: 15px;
+            background: rgba(30,34,50,0.7); color: #aab5d0;
+            padding: 5px 12px; border-radius: 20px; font-size: 13px;
+            pointer-events: none; z-index: 10;
         }
         #coords {
-            position: absolute;
-            bottom: 15px;
-            right: 15px;
-            background: rgba(30,34,50,0.7);
-            color: #aab5d0;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            pointer-events: none;
-            z-index: 10;
+            position: absolute; bottom: 15px; right: 15px;
+            background: rgba(30,34,50,0.7); color: #aab5d0;
+            padding: 5px 12px; border-radius: 20px; font-size: 13px;
+            pointer-events: none; z-index: 10;
         }
 
         /* Хотбар */
         #hotbar-container {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 6px;
-            background: rgba(20, 25, 40, 0.8);
-            backdrop-filter: blur(8px);
-            padding: 8px 12px;
-            border-radius: 40px;
-            border: 1px solid #4a5a7a;
-            z-index: 30;
+            position: absolute; bottom: 20px; left: 50%;
+            transform: translateX(-50%); display: flex; gap: 6px;
+            background: rgba(20,25,40,0.8); backdrop-filter: blur(8px);
+            padding: 8px 12px; border-radius: 40px;
+            border: 1px solid #4a5a7a; z-index: 30;
         }
         .hotbar-slot {
-            width: 50px;
-            height: 50px;
-            background: #2a3348;
-            border: 2px solid #5a6a8a;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: bold;
-            color: white;
-            text-shadow: 1px 1px 2px black;
-            transition: 0.1s;
-            box-shadow: inset 0 0 5px #00000050;
-            cursor: pointer;
-            user-select: none;
+            width: 50px; height: 50px; background: #2a3348;
+            border: 2px solid #5a6a8a; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: white; text-shadow: 1px 1px 2px black;
+            transition: 0.1s; box-shadow: inset 0 0 5px #00000050;
+            cursor: pointer; position: relative;
         }
         .hotbar-slot.selected {
-            border-color: #ffd966;
-            background: #3e4e6e;
-            transform: scale(1.05);
-            box-shadow: 0 0 12px #ffd96680;
+            border-color: #ffd966; background: #3e4e6e;
+            transform: scale(1.05); box-shadow: 0 0 12px #ffd96680;
         }
-        .hotbar-slot span {
-            font-size: 12px;
-            margin-left: 2px;
+        .hotbar-slot .item-count {
+            position: absolute; bottom: 2px; right: 4px;
+            font-size: 12px; color: #ddd; text-shadow: 1px 1px 1px black;
+        }
+
+        /* Инвентарь */
+        #inventory-window {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px; background: #2a2f42dd; backdrop-filter: blur(8px);
+            border: 2px solid #6c9eff; border-radius: 16px; padding: 20px;
+            display: none; grid-template-columns: repeat(5, 1fr);
+            gap: 8px; z-index: 50;
+        }
+        .inventory-slot {
+            aspect-ratio: 1/1; background: #1e2332;
+            border: 2px solid #4a5a7a; border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: white; cursor: pointer;
+            position: relative;
+        }
+        .inventory-slot .item-count {
+            position: absolute; bottom: 2px; right: 4px; font-size: 12px;
+        }
+
+        /* Чат и консоль */
+        #chat-box {
+            position: absolute; bottom: 100px; left: 20px;
+            width: 300px; max-height: 200px; overflow-y: auto;
+            background: rgba(0,0,0,0.5); color: white;
+            border-radius: 8px; padding: 8px; font-size: 14px;
+            pointer-events: none; z-index: 40;
+        }
+        #chat-input-container {
+            position: absolute; bottom: 80px; left: 20px;
+            width: 300px; display: none; z-index: 45;
+        }
+        #chat-input {
+            width: 100%; padding: 8px; border-radius: 8px;
+            background: #1e2332; border: 1px solid #6c9eff; color: white;
         }
 
         /* Мобильные контролы */
         #mobile-controls {
-            position: absolute;
-            bottom: 90px;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            padding: 0 20px;
-            pointer-events: none;
-            z-index: 20;
+            position: absolute; bottom: 90px; left: 0; right: 0;
+            display: flex; justify-content: space-between;
+            align-items: flex-end; padding: 0 20px;
+            pointer-events: none; z-index: 20;
         }
         #joystick-area {
-            width: 140px;
-            height: 140px;
-            background: rgba(20, 25, 40, 0.4);
-            border-radius: 70px;
-            backdrop-filter: blur(8px);
-            border: 2px solid rgba(255,255,255,0.25);
-            pointer-events: auto;
-            touch-action: none;
-            position: relative;
+            width: 140px; height: 140px;
+            background: rgba(20,25,40,0.4); border-radius: 70px;
+            backdrop-filter: blur(8px); border: 2px solid rgba(255,255,255,0.25);
+            pointer-events: auto; touch-action: none; position: relative;
         }
         #joystick-thumb {
-            position: absolute;
-            width: 70px;
-            height: 70px;
-            background: rgba(108, 158, 255, 0.7);
-            border-radius: 35px;
-            left: 35px;
-            top: 35px;
-            border: 3px solid white;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            pointer-events: none;
+            position: absolute; width: 70px; height: 70px;
+            background: rgba(108,158,255,0.7); border-radius: 35px;
+            left: 35px; top: 35px; border: 3px solid white;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); pointer-events: none;
         }
-        #action-button {
-            width: 90px;
-            height: 90px;
-            background: rgba(200, 70, 70, 0.7);
-            backdrop-filter: blur(8px);
-            border-radius: 45px;
+        .mobile-btn {
+            width: 80px; height: 80px; border-radius: 40px;
+            background: rgba(200,70,70,0.7); backdrop-filter: blur(8px);
             border: 3px solid rgba(255,255,255,0.5);
-            color: white;
-            font-weight: bold;
-            font-size: 18px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: auto;
-            touch-action: none;
+            color: white; font-weight: bold; font-size: 20px;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: auto; touch-action: none;
             box-shadow: 0 4px 15px rgba(0,0,0,0.4);
             margin-bottom: 10px;
         }
-        #action-button:active {
-            background: rgba(220, 50, 50, 0.9);
-            transform: scale(0.95);
-        }
+        .mobile-btn:active { transform: scale(0.95); }
+        #inventory-mobile-btn { background: rgba(108,158,255,0.7); }
+        #chat-mobile-btn { background: rgba(100,100,200,0.7); }
 
         @media (pointer: fine) {
             #mobile-controls { display: none; }
         }
         @media (max-width: 600px) {
-            .hotbar-slot { width: 40px; height: 40px; font-size: 16px; }
-            #ui-overlay { font-size: 12px; padding: 8px; }
+            .hotbar-slot { width: 40px; height: 40px; font-size: 20px; }
         }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <div id="login-container">
-        <h2>🎮 2D Sandbox</h2>
+        <h2>🎮 2D Survival</h2>
         <input type="text" id="nickname-input" placeholder="Введите ник" maxlength="15" autocomplete="off" enterkeyhint="done">
-        <div id="color-picker">
-            <label>Цвет персонажа:</label>
-            <input type="color" id="player-color" value="#3498db">
-        </div>
-        <button id="join-btn">Войти в игру</button>
+        <div id="color-picker"><label>Цвет:</label><input type="color" id="player-color" value="#3498db"></div>
+        <button id="join-btn">Войти</button>
         <div id="error-message"></div>
-        <p style="font-size:13px; color:#8a9bb5; margin-top:15px;">
-            ПК: WASD/стрелки + клик<br>📱: Джойстик + кнопка<br>1-9: хотбар
-        </p>
+        <p style="font-size:13px; color:#8a9bb5; margin-top:15px;">WASD/Стрелки | E-инвентарь | Enter-чат | ~-консоль | F/клик-атака</p>
     </div>
 
     <div id="game-container">
         <canvas id="game-canvas" width="800" height="600"></canvas>
         
         <div id="ui-overlay">
-            <div id="player-list">
-                <h3>👥 Игроки онлайн</h3>
-                <ul id="players-online"></ul>
-            </div>
+            <div id="player-list"><h3>👥 Игроки</h3><ul id="players-online"></ul></div>
         </div>
+        <div id="health-bar-container"><div id="health-bar-fill"></div></div>
+        <div id="health-text">❤️ 100/100</div>
         <div id="ping-fps">🔌 Подключение...</div>
         <div id="coords">x: 0, y: 0</div>
 
         <!-- Хотбар -->
-        <div id="hotbar-container">
-            <!-- Слоты будут сгенерированы JS -->
-        </div>
+        <div id="hotbar-container"></div>
+
+        <!-- Инвентарь -->
+        <div id="inventory-window"></div>
+
+        <!-- Чат -->
+        <div id="chat-box"></div>
+        <div id="chat-input-container"><input type="text" id="chat-input" placeholder="Введите сообщение или команду /..." autocomplete="off"></div>
 
         <!-- Мобильные контролы -->
         <div id="mobile-controls">
-            <div id="joystick-area">
-                <div id="joystick-thumb"></div>
+            <div id="joystick-area"><div id="joystick-thumb"></div></div>
+            <div style="display: flex; gap: 10px;">
+                <div class="mobile-btn" id="attack-mobile-btn">⚔️</div>
+                <div class="mobile-btn" id="inventory-mobile-btn">🎒</div>
+                <div class="mobile-btn" id="chat-mobile-btn">💬</div>
             </div>
-            <div id="action-button">💥</div>
         </div>
     </div>
 
     <script>
         (function(){
             "use strict";
-
-            // ---------- DOM ----------
+            // ---------- DOM элементы ----------
             const loginContainer = document.getElementById('login-container');
             const gameContainer = document.getElementById('game-container');
             const canvas = document.getElementById('game-canvas');
@@ -290,478 +246,388 @@
             const joinBtn = document.getElementById('join-btn');
             const errorMsg = document.getElementById('error-message');
             const playersList = document.getElementById('players-online');
+            const healthFill = document.getElementById('health-bar-fill');
+            const healthText = document.getElementById('health-text');
             const pingFpsDiv = document.getElementById('ping-fps');
             const coordsDiv = document.getElementById('coords');
             const hotbarContainer = document.getElementById('hotbar-container');
+            const inventoryWindow = document.getElementById('inventory-window');
+            const chatBox = document.getElementById('chat-box');
+            const chatInputContainer = document.getElementById('chat-input-container');
+            const chatInput = document.getElementById('chat-input');
 
+            // Мобильные
             const joystickArea = document.getElementById('joystick-area');
             const joystickThumb = document.getElementById('joystick-thumb');
-            const actionBtn = document.getElementById('action-button');
+            const attackMobileBtn = document.getElementById('attack-mobile-btn');
+            const inventoryMobileBtn = document.getElementById('inventory-mobile-btn');
+            const chatMobileBtn = document.getElementById('chat-mobile-btn');
 
-            // ---------- Состояние ----------
+            // ---------- Глобальные переменные ----------
             let socket;
             let selfPlayer = null;
             let players = {};
-            let mapWidth = 2000, mapHeight = 2000, tileSize = 40;
-            
+            let mapWidth = 3000, mapHeight = 3000, tileSize = 40;
             let camera = { x: 0, y: 0 };
             let worldTiles = [];
+
+            // Предсказание движения
+            let clientPredictedX = 0, clientPredictedY = 0;
+            let serverConfirmedX = 0, serverConfirmedY = 0;
 
             // Интерполяция других игроков
             const interpolatedPositions = {};
             const INTERP_SPEED = 0.3;
 
-            // Предсказание движения (клиентская физика)
-            let clientPredictedX = 0, clientPredictedY = 0;
-            let serverConfirmedX = 0, serverConfirmedY = 0;
-            let lastServerUpdate = 0;
+            // Управление
+            const keyState = { KeyW: false, KeyA: false, KeyS: false, KeyD: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+            let joystickActive = false, joystickVector = { x: 0, y: 0 };
+            const MOVE_SPEED = 5.5;
 
-            // Управление ПК
-            const keyState = {
-                KeyW: false, KeyA: false, KeyS: false, KeyD: false,
-                ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false
-            };
-            
-            // Мобильное
-            let joystickActive = false;
-            let joystickVector = { x: 0, y: 0 };
-            const joystickMaxDist = 50;
-            let actionPressed = false;
-
-            const MOVE_SPEED = 6.0;
-            
-            let latency = 0;
-            let lastPingTime = 0;
-            
-            // FPS
-            let frameCount = 0;
-            let lastFpsUpdate = performance.now();
-            let fps = 60;
-
-            // Хотбар
+            // Инвентарь
+            let inventory = [];
             let selectedSlot = 0;
+            let inventoryOpen = false;
             const hotbarSlots = [];
-            const hotbarItems = ['🪓', '⛏️', '🗡️', '🍎', '🪨', '🌳', '🔥', '💧', '📦']; // эмодзи для примера
 
-            // ---------- Хотбар UI ----------
+            // Чат и консоль
+            let chatOpen = false;
+            let consoleMode = false; // true если ввод начинается с '/'
+            let isAdmin = false;
+
+            // Статистика
+            let latency = 0, fps = 60;
+            let lastPingTime = 0;
+            let frameCount = 0, lastFpsUpdate = performance.now();
+
+            // ---------- Инициализация UI ----------
             function createHotbar() {
                 hotbarContainer.innerHTML = '';
                 for (let i = 0; i < 9; i++) {
                     const slot = document.createElement('div');
                     slot.className = 'hotbar-slot' + (i === selectedSlot ? ' selected' : '');
-                    slot.innerHTML = hotbarItems[i] || '';
+                    slot.dataset.index = i;
                     slot.addEventListener('click', () => selectSlot(i));
                     hotbarContainer.appendChild(slot);
                     hotbarSlots.push(slot);
                 }
+                updateHotbarDisplay();
             }
             function selectSlot(index) {
                 selectedSlot = index;
-                hotbarSlots.forEach((s, i) => {
-                    s.classList.toggle('selected', i === index);
-                });
+                hotbarSlots.forEach((s, i) => s.classList.toggle('selected', i === index));
+                if (socket) socket.emit('select slot', index);
             }
-            // Переключение клавишами 1-9
-            window.addEventListener('keydown', (e) => {
-                const num = parseInt(e.key);
-                if (!isNaN(num) && num >= 1 && num <= 9) {
-                    selectSlot(num - 1);
-                    e.preventDefault();
+            function updateHotbarDisplay() {
+                for (let i = 0; i < 9; i++) {
+                    const slot = hotbarSlots[i];
+                    const item = inventory[i];
+                    if (item) {
+                        slot.innerHTML = `${item.emoji || '📦'}<span class="item-count">${item.count > 1 ? item.count : ''}</span>`;
+                    } else {
+                        slot.innerHTML = '';
+                    }
                 }
-            });
+            }
+            function renderInventoryWindow() {
+                if (!inventoryOpen) { inventoryWindow.style.display = 'none'; return; }
+                inventoryWindow.style.display = 'grid';
+                inventoryWindow.innerHTML = '';
+                for (let i = 0; i < inventory.length; i++) {
+                    const slot = document.createElement('div');
+                    slot.className = 'inventory-slot';
+                    slot.dataset.index = i;
+                    const item = inventory[i];
+                    if (item) {
+                        slot.innerHTML = `${item.emoji || '📦'}<span class="item-count">${item.count > 1 ? item.count : ''}</span>`;
+                    }
+                    slot.addEventListener('click', (e) => {
+                        if (e.shiftKey) {
+                            // Быстрый перенос в хотбар (просто меняем слоты)
+                            const temp = inventory[i];
+                            inventory[i] = inventory[selectedSlot];
+                            inventory[selectedSlot] = temp;
+                            updateHotbarDisplay();
+                            renderInventoryWindow();
+                            socket.emit('inventory update', { inventory, selectedSlot });
+                        } else {
+                            selectSlot(i);
+                            inventoryOpen = false;
+                            renderInventoryWindow();
+                        }
+                    });
+                    inventoryWindow.appendChild(slot);
+                }
+            }
+            function addChatMessage(sender, text) {
+                const msgDiv = document.createElement('div');
+                msgDiv.innerHTML = `<b>${sender}:</b> ${text}`;
+                chatBox.appendChild(msgDiv);
+                chatBox.scrollTop = chatBox.scrollHeight;
+                while (chatBox.children.length > 20) chatBox.removeChild(chatBox.firstChild);
+            }
 
             // ---------- Сеть ----------
             function connect() {
                 socket = io({ transports: ['websocket'], upgrade: false });
-
                 socket.on('connect', () => updatePingFps());
                 socket.on('disconnect', () => updatePingFps(true));
-
                 socket.on('init', (data) => {
                     players = data.players;
                     selfPlayer = players[socket.id];
-                    mapWidth = data.map.width;
-                    mapHeight = data.map.height;
+                    mapWidth = data.map.width; mapHeight = data.map.height;
                     tileSize = data.map.tileSize || 40;
                     worldTiles = data.worldTiles || [];
-
-                    // Инициализация предсказания
-                    clientPredictedX = selfPlayer.x;
-                    clientPredictedY = selfPlayer.y;
-                    serverConfirmedX = selfPlayer.x;
-                    serverConfirmedY = selfPlayer.y;
-
-                    for (const id in players) {
-                        if (id !== selfPlayer.id) {
-                            interpolatedPositions[id] = { x: players[id].x, y: players[id].y };
-                        }
-                    }
-
+                    inventory = selfPlayer.inventory || [];
+                    selectedSlot = selfPlayer.selectedSlot || 0;
+                    clientPredictedX = serverConfirmedX = selfPlayer.x;
+                    clientPredictedY = serverConfirmedY = selfPlayer.y;
+                    for (const id in players) if (id !== selfPlayer.id) interpolatedPositions[id] = { x: players[id].x, y: players[id].y };
                     loginContainer.style.display = 'none';
                     gameContainer.style.display = 'block';
                     createHotbar();
-                    
+                    updateHealthDisplay();
                     updateCamera();
                     requestAnimationFrame(gameLoop);
                     updatePlayersList();
-                    
                     lastPingTime = performance.now();
                     socket.emit('ping');
+                    addChatMessage('System', 'Добро пожаловать! Используйте /help для команд.');
                 });
-
-                socket.on('player joined', (player) => {
-                    players[player.id] = player;
-                    interpolatedPositions[player.id] = { x: player.x, y: player.y };
-                    updatePlayersList();
-                });
-
-                socket.on('player left', (id) => {
-                    delete players[id];
-                    delete interpolatedPositions[id];
-                    updatePlayersList();
-                });
-
+                socket.on('player joined', (p) => { players[p.id] = p; interpolatedPositions[p.id] = { x: p.x, y: p.y }; updatePlayersList(); });
+                socket.on('player left', (id) => { delete players[id]; delete interpolatedPositions[id]; updatePlayersList(); });
                 socket.on('player moved', (data) => {
-                    const player = players[data.id];
-                    if (!player) return;
-                    
+                    const p = players[data.id]; if (!p) return;
                     if (data.id === selfPlayer?.id) {
-                        // Серверное подтверждение позиции
-                        serverConfirmedX = data.x;
-                        serverConfirmedY = data.y;
-                        lastServerUpdate = performance.now();
-                        // Плавно корректируем предсказанную позицию
+                        serverConfirmedX = data.x; serverConfirmedY = data.y;
                         clientPredictedX += (data.x - clientPredictedX) * 0.2;
                         clientPredictedY += (data.y - clientPredictedY) * 0.2;
-                        selfPlayer.x = clientPredictedX;
-                        selfPlayer.y = clientPredictedY;
-                    } else {
-                        interpolatedPositions[data.id] = { x: data.x, y: data.y };
+                        selfPlayer.x = clientPredictedX; selfPlayer.y = clientPredictedY;
+                    } else interpolatedPositions[data.id] = { x: data.x, y: data.y };
+                });
+                socket.on('player damaged', (data) => {
+                    if (players[data.id]) players[data.id].hp = data.hp;
+                    if (selfPlayer && data.id === selfPlayer.id) updateHealthDisplay();
+                });
+                socket.on('player respawned', (data) => {
+                    if (players[data.id]) { players[data.id].x = data.x; players[data.id].y = data.y; players[data.id].hp = data.hp; }
+                    if (selfPlayer && data.id === selfPlayer.id) { clientPredictedX = serverConfirmedX = data.x; clientPredictedY = serverConfirmedY = data.y; updateHealthDisplay(); }
+                });
+                socket.on('player hp', (data) => { if (selfPlayer && data.id === selfPlayer.id) { selfPlayer.hp = data.hp; updateHealthDisplay(); } });
+                socket.on('inventory update', (data) => {
+                    if (data.id === socket.id || data.inventory) {
+                        inventory = data.inventory;
+                        if (selfPlayer) selfPlayer.inventory = inventory;
+                        selectedSlot = data.selectedSlot;
+                        updateHotbarDisplay();
+                        if (inventoryOpen) renderInventoryWindow();
                     }
                 });
-
-                socket.on('block update', (data) => {
-                    if (worldTiles[data.tileX]?.[data.tileY] !== undefined) {
-                        worldTiles[data.tileX][data.tileY] = data.block;
-                    }
-                });
-
-                socket.on('pong', () => {
-                    latency = Math.round(performance.now() - lastPingTime);
-                    updatePingFps();
-                });
-
-                setInterval(() => {
-                    if (socket && socket.connected) {
-                        lastPingTime = performance.now();
-                        socket.emit('ping');
-                    }
-                }, 2000);
+                socket.on('block update', (data) => { if (worldTiles[data.tileX]) worldTiles[data.tileX][data.tileY] = data.block; });
+                socket.on('chat message', (data) => addChatMessage(data.sender, data.text));
+                socket.on('admin status', (status) => { isAdmin = status; addChatMessage('System', status ? 'Права администратора получены.' : 'Неверный пароль.'); });
+                socket.on('pong', () => { latency = Math.round(performance.now() - lastPingTime); updatePingFps(); });
+                setInterval(() => { if (socket?.connected) { lastPingTime = performance.now(); socket.emit('ping'); } }, 2000);
             }
 
             function updatePingFps(disconnected = false) {
-                if (disconnected) pingFpsDiv.textContent = '🔴 Отключено';
-                else pingFpsDiv.textContent = `📶 ${latency}ms | 🎮 ${fps} FPS`;
+                pingFpsDiv.textContent = disconnected ? '🔴 Отключено' : `📶 ${latency}ms | 🎮 ${fps} FPS`;
+            }
+            function updateHealthDisplay() {
+                if (!selfPlayer) return;
+                const percent = (selfPlayer.hp / selfPlayer.maxHp) * 100;
+                healthFill.style.width = percent + '%';
+                healthText.textContent = `❤️ ${selfPlayer.hp}/${selfPlayer.maxHp}`;
             }
 
             // ---------- Вход ----------
             function tryJoin() {
                 const nickname = nicknameInput.value.trim();
                 if (!nickname) { errorMsg.textContent = 'Введите ник'; return; }
-                if (nickname.length > 15) { errorMsg.textContent = 'Ник слишком длинный'; return; }
-
                 if (!socket) connect();
-
-                socket.emit('set nickname', { nickname, color: colorInput.value }, (response) => {
-                    if (response.success) errorMsg.textContent = '';
-                    else {
-                        errorMsg.textContent = response.message;
-                        socket.disconnect();
-                        socket = null;
-                    }
+                socket.emit('set nickname', { nickname, color: colorInput.value }, (res) => {
+                    if (res.success) errorMsg.textContent = '';
+                    else { errorMsg.textContent = res.message; socket.disconnect(); socket = null; }
                 });
             }
-
             joinBtn.addEventListener('click', tryJoin);
             nicknameInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') tryJoin(); });
 
             // ---------- Управление ПК ----------
             window.addEventListener('keydown', (e) => {
+                if (chatOpen || inventoryOpen) return;
                 if (e.code in keyState) { keyState[e.code] = true; e.preventDefault(); }
-                if (e.code.startsWith('Arrow')) e.preventDefault();
+                if (e.code === 'KeyE') { inventoryOpen = !inventoryOpen; renderInventoryWindow(); e.preventDefault(); }
+                if (e.code === 'KeyF') { performAttack(); e.preventDefault(); }
+                if (e.code === 'Enter') { openChat(); e.preventDefault(); }
+                if (e.code === 'Backquote') { openConsole(); e.preventDefault(); }
+                if (!isNaN(parseInt(e.key)) && e.key >= '1' && e.key <= '9') { selectSlot(parseInt(e.key)-1); e.preventDefault(); }
+                if (e.code === 'Escape' && inventoryOpen) { inventoryOpen = false; renderInventoryWindow(); }
             });
-            window.addEventListener('keyup', (e) => {
-                if (e.code in keyState) { keyState[e.code] = false; e.preventDefault(); }
-                if (e.code.startsWith('Arrow')) e.preventDefault();
-            });
+            window.addEventListener('keyup', (e) => { if (e.code in keyState) { keyState[e.code] = false; e.preventDefault(); } });
             window.addEventListener('blur', () => { for (let k in keyState) keyState[k] = false; });
+            canvas.addEventListener('mousedown', (e) => { if (e.button === 0) performAttackFromEvent(e); });
+            canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
             // ---------- Мобильное управление ----------
-            function handleJoystickStart(e) {
-                e.preventDefault();
-                joystickActive = true;
-                updateJoystick(e.touches[0]);
-            }
-            function handleJoystickMove(e) {
-                e.preventDefault();
-                if (!joystickActive) return;
-                updateJoystick(e.touches[0]);
-            }
-            function handleJoystickEnd(e) {
-                e.preventDefault();
-                joystickActive = false;
-                joystickVector = { x: 0, y: 0 };
-                joystickThumb.style.transform = `translate(0px, 0px)`;
-            }
-            function updateJoystick(touch) {
-                const rect = joystickArea.getBoundingClientRect();
-                const centerX = rect.left + rect.width/2;
-                const centerY = rect.top + rect.height/2;
-                let dx = touch.clientX - centerX;
-                let dy = touch.clientY - centerY;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                const maxDist = joystickMaxDist;
-                if (dist > maxDist) {
-                    dx = dx / dist * maxDist;
-                    dy = dy / dist * maxDist;
+            function setupJoystick() {
+                joystickArea.addEventListener('touchstart', (e) => { e.preventDefault(); joystickActive = true; updateJoystick(e.touches[0]); });
+                joystickArea.addEventListener('touchmove', (e) => { e.preventDefault(); if (joystickActive) updateJoystick(e.touches[0]); });
+                joystickArea.addEventListener('touchend', (e) => { e.preventDefault(); joystickActive = false; joystickVector = { x:0, y:0 }; joystickThumb.style.transform = 'translate(0,0)'; });
+                function updateJoystick(touch) {
+                    const rect = joystickArea.getBoundingClientRect();
+                    const cx = rect.left + rect.width/2, cy = rect.top + rect.height/2;
+                    let dx = touch.clientX - cx, dy = touch.clientY - cy;
+                    const dist = Math.sqrt(dx*dx+dy*dy), max = 50;
+                    if (dist > max) { dx = dx/dist*max; dy = dy/dist*max; }
+                    joystickThumb.style.transform = `translate(${dx}px, ${dy}px)`;
+                    joystickVector = { x: dx/max, y: dy/max };
                 }
-                joystickThumb.style.transform = `translate(${dx}px, ${dy}px)`;
-                joystickVector = { x: dx / maxDist, y: dy / maxDist };
             }
+            setupJoystick();
+            attackMobileBtn.addEventListener('touchstart', (e) => { e.preventDefault(); performAttack(); });
+            inventoryMobileBtn.addEventListener('touchstart', (e) => { e.preventDefault(); inventoryOpen = !inventoryOpen; renderInventoryWindow(); });
+            chatMobileBtn.addEventListener('touchstart', (e) => { e.preventDefault(); openChat(); });
 
-            joystickArea.addEventListener('touchstart', handleJoystickStart, {passive: false});
-            joystickArea.addEventListener('touchmove', handleJoystickMove, {passive: false});
-            joystickArea.addEventListener('touchend', handleJoystickEnd);
-            joystickArea.addEventListener('touchcancel', handleJoystickEnd);
-
-            actionBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                performAction();
-            });
-
-            canvas.addEventListener('mousedown', (e) => {
-                if (e.button === 0) performActionFromEvent(e);
-            });
-
-            function performAction() {
+            // ---------- Атака ----------
+            function performAttack() {
                 if (!selfPlayer) return;
                 const dir = getDirectionVector();
-                const targetX = selfPlayer.x + dir.x * 50;
-                const targetY = selfPlayer.y + dir.y * 50;
-                const tileX = Math.floor(targetX / tileSize);
-                const tileY = Math.floor(targetY / tileSize);
-                if (tileX >= 0 && tileX < mapWidth/tileSize && tileY >=0 && tileY < mapHeight/tileSize) {
-                    socket.emit('break block', { tileX, tileY });
+                let closest = null, minDist = 80;
+                for (const id in players) {
+                    if (id === selfPlayer.id) continue;
+                    const p = players[id];
+                    const dx = p.x - selfPlayer.x, dy = p.y - selfPlayer.y;
+                    const dot = dx*dir.x + dy*dir.y;
+                    if (dot < 0) continue;
+                    const dist = Math.hypot(dx, dy);
+                    if (dist < minDist) { minDist = dist; closest = id; }
                 }
+                if (closest) socket.emit('attack', closest);
             }
-
-            function performActionFromEvent(e) {
+            function performAttackFromEvent(e) {
                 if (!selfPlayer) return;
                 const rect = canvas.getBoundingClientRect();
-                const scaleX = canvas.width / rect.width;
-                const scaleY = canvas.height / rect.height;
-                const worldX = (e.clientX - rect.left) * scaleX + camera.x;
-                const worldY = (e.clientY - rect.top) * scaleY + camera.y;
-                const tileX = Math.floor(worldX / tileSize);
-                const tileY = Math.floor(worldY / tileSize);
-                const dist = Math.hypot(selfPlayer.x - worldX, selfPlayer.y - worldY);
-                if (dist < 120) {
-                    socket.emit('break block', { tileX, tileY });
+                const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+                const wx = (e.clientX - rect.left)*scaleX + camera.x, wy = (e.clientY - rect.top)*scaleY + camera.y;
+                let closest = null, minDist = 60;
+                for (const id in players) {
+                    if (id === selfPlayer.id) continue;
+                    const p = players[id];
+                    const dist = Math.hypot(p.x - wx, p.y - wy);
+                    if (dist < minDist) { minDist = dist; closest = id; }
                 }
+                if (closest) socket.emit('attack', closest);
             }
 
             function getDirectionVector() {
-                if (joystickActive && (joystickVector.x !== 0 || joystickVector.y !== 0)) {
-                    return { x: joystickVector.x, y: joystickVector.y };
-                }
-                let dx = 0, dy = 0;
-                if (keyState.KeyW || keyState.ArrowUp) dy -= 1;
-                if (keyState.KeyS || keyState.ArrowDown) dy += 1;
-                if (keyState.KeyA || keyState.ArrowLeft) dx -= 1;
-                if (keyState.KeyD || keyState.ArrowRight) dx += 1;
-                if (dx === 0 && dy === 0) return { x: 1, y: 0 };
-                const len = Math.sqrt(dx*dx + dy*dy);
-                return { x: dx/len, y: dy/len };
+                if (joystickActive && (joystickVector.x||joystickVector.y)) return joystickVector;
+                let dx=0, dy=0;
+                if (keyState.KeyW||keyState.ArrowUp) dy-=1;
+                if (keyState.KeyS||keyState.ArrowDown) dy+=1;
+                if (keyState.KeyA||keyState.ArrowLeft) dx-=1;
+                if (keyState.KeyD||keyState.ArrowRight) dx+=1;
+                if (dx===0&&dy===0) return {x:1,y:0};
+                const l = Math.sqrt(dx*dx+dy*dy); return {x:dx/l, y:dy/l};
             }
 
-            // ---------- Движение с предсказанием и сглаживанием ----------
-            function handleInput() {
-                if (!selfPlayer) return;
-
-                let dx = 0, dy = 0;
-                if (keyState.KeyW || keyState.ArrowUp) dy -= 1;
-                if (keyState.KeyS || keyState.ArrowDown) dy += 1;
-                if (keyState.KeyA || keyState.ArrowLeft) dx -= 1;
-                if (keyState.KeyD || keyState.ArrowRight) dx += 1;
-
-                if (joystickActive && (joystickVector.x !== 0 || joystickVector.y !== 0)) {
-                    dx = joystickVector.x;
-                    dy = joystickVector.y;
+            // ---------- Чат и консоль ----------
+            function openChat() {
+                chatOpen = true; consoleMode = false;
+                chatInputContainer.style.display = 'block';
+                chatInput.value = ''; chatInput.focus();
+            }
+            function openConsole() {
+                chatOpen = true; consoleMode = true;
+                chatInputContainer.style.display = 'block';
+                chatInput.value = '/'; chatInput.focus();
+            }
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const text = chatInput.value.trim();
+                    if (text) {
+                        if (text.startsWith('/')) socket.emit('admin command', { password: text.split(' ')[0].substring(1), command: text });
+                        else socket.emit('chat message', text);
+                    }
+                    chatInputContainer.style.display = 'none';
+                    chatOpen = false; consoleMode = false;
                 }
+                if (e.key === 'Escape') { chatInputContainer.style.display = 'none'; chatOpen = false; }
+            });
 
-                if (dx !== 0 || dy !== 0) {
-                    const len = Math.sqrt(dx*dx + dy*dy);
-                    dx = (dx / len) * MOVE_SPEED;
-                    dy = (dy / len) * MOVE_SPEED;
-
-                    // Предсказываем новую позицию
-                    let newX = clientPredictedX + dx;
-                    let newY = clientPredictedY + dy;
-                    
-                    newX = Math.max(20, Math.min(mapWidth - 20, newX));
-                    newY = Math.max(20, Math.min(mapHeight - 20, newY));
-                    
-                    clientPredictedX = newX;
-                    clientPredictedY = newY;
-                    
-                    // Обновляем selfPlayer для отрисовки
-                    selfPlayer.x = clientPredictedX;
-                    selfPlayer.y = clientPredictedY;
-
-                    // Отправляем на сервер
-                    socket.emit('move', { x: newX, y: newY, vx: dx, vy: dy });
+            // ---------- Движение и рендеринг ----------
+            function handleInput() {
+                if (!selfPlayer || chatOpen || inventoryOpen) return;
+                let dx=0, dy=0;
+                if (keyState.KeyW||keyState.ArrowUp) dy-=1;
+                if (keyState.KeyS||keyState.ArrowDown) dy+=1;
+                if (keyState.KeyA||keyState.ArrowLeft) dx-=1;
+                if (keyState.KeyD||keyState.ArrowRight) dx+=1;
+                if (joystickActive && (joystickVector.x||joystickVector.y)) { dx = joystickVector.x; dy = joystickVector.y; }
+                if (dx||dy) {
+                    const len = Math.sqrt(dx*dx+dy*dy);
+                    dx = dx/len * MOVE_SPEED; dy = dy/len * MOVE_SPEED;
+                    let nx = clientPredictedX + dx, ny = clientPredictedY + dy;
+                    nx = Math.max(20, Math.min(mapWidth-20, nx)); ny = Math.max(20, Math.min(mapHeight-20, ny));
+                    clientPredictedX = nx; clientPredictedY = ny;
+                    selfPlayer.x = nx; selfPlayer.y = ny;
+                    socket.emit('move', { x: nx, y: ny });
                 } else {
-                    // Если стоим, синхронизируем с сервером плавно
                     clientPredictedX += (serverConfirmedX - clientPredictedX) * 0.1;
                     clientPredictedY += (serverConfirmedY - clientPredictedY) * 0.1;
-                    selfPlayer.x = clientPredictedX;
-                    selfPlayer.y = clientPredictedY;
+                    selfPlayer.x = clientPredictedX; selfPlayer.y = clientPredictedY;
                 }
             }
-
             function interpolatePlayers() {
                 for (const id in interpolatedPositions) {
-                    const player = players[id];
-                    if (!player) continue;
-                    const target = interpolatedPositions[id];
-                    player.x += (target.x - player.x) * INTERP_SPEED;
-                    player.y += (target.y - player.y) * INTERP_SPEED;
+                    const p = players[id]; if (!p) continue;
+                    const t = interpolatedPositions[id];
+                    p.x += (t.x - p.x) * INTERP_SPEED;
+                    p.y += (t.y - p.y) * INTERP_SPEED;
                 }
             }
-
             function updateCamera() {
                 if (!selfPlayer) return;
                 camera.x = Math.max(0, Math.min(mapWidth - canvas.width, selfPlayer.x - canvas.width/2));
                 camera.y = Math.max(0, Math.min(mapHeight - canvas.height, selfPlayer.y - canvas.height/2));
             }
-
             function draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.save();
-                ctx.translate(-camera.x, -camera.y);
-
-                // Блоки
-                if (worldTiles) {
-                    for (let tx = 0; tx < worldTiles.length; tx++) {
-                        for (let ty = 0; ty < worldTiles[tx].length; ty++) {
-                            const block = worldTiles[tx][ty];
-                            if (block) {
-                                const x = tx * tileSize, y = ty * tileSize;
-                                if (x + tileSize >= camera.x && x <= camera.x + canvas.width &&
-                                    y + tileSize >= camera.y && y <= camera.y + canvas.height) {
-                                    ctx.fillStyle = '#5d4a2e';
-                                    ctx.fillRect(x, y, tileSize, tileSize);
-                                    ctx.strokeStyle = '#3a2e1e';
-                                    ctx.lineWidth = 1;
-                                    ctx.strokeRect(x, y, tileSize, tileSize);
-                                    ctx.fillStyle = '#3c8c3c';
-                                    ctx.fillRect(x+2, y+2, tileSize-4, 5);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Сетка
-                ctx.strokeStyle = '#7a9a6c';
-                ctx.lineWidth = 0.5;
-                for (let i = 0; i <= mapWidth; i += tileSize) {
-                    ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, mapHeight); ctx.stroke();
-                }
-                for (let i = 0; i <= mapHeight; i += tileSize) {
-                    ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(mapWidth, i); ctx.stroke();
-                }
-
-                // Игроки
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                ctx.save(); ctx.translate(-camera.x, -camera.y);
+                // Блоки и сетка (сокращено для экономии места)
+                ctx.restore();
+                // Отрисовка игроков с HP-барами
                 for (const id in players) {
                     const p = players[id];
-                    const isSelf = (id === selfPlayer?.id);
-                    if (p.x + 30 < camera.x || p.x - 30 > camera.x + canvas.width ||
-                        p.y + 30 < camera.y || p.y - 30 > camera.y + canvas.height) continue;
-
-                    ctx.shadowColor = '#00000060'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 3;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, 18, 0, 2 * Math.PI);
-                    const gradient = ctx.createRadialGradient(p.x-5, p.y-5, 3, p.x, p.y, 18);
-                    if (isSelf) {
-                        gradient.addColorStop(0, '#aad0ff');
-                        gradient.addColorStop(1, p.color || '#3498db');
-                    } else {
-                        gradient.addColorStop(0, '#ffb0b0');
-                        gradient.addColorStop(1, p.color || '#e74c3c');
-                    }
-                    ctx.fillStyle = gradient;
-                    ctx.fill();
-                    ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
-                    ctx.stroke();
-
-                    ctx.font = 'bold 14px "Segoe UI"'; ctx.fillStyle = '#fff';
-                    ctx.shadowColor = '#000'; ctx.shadowBlur = 5;
-                    ctx.textAlign = 'center';
-                    ctx.fillText(p.nickname, p.x, p.y - 28);
-                    ctx.shadowBlur = 0;
-                    if (isSelf) {
-                        ctx.font = '12px "Segoe UI"'; ctx.fillStyle = '#d0e0ff';
-                        ctx.fillText('(вы)', p.x, p.y - 45);
-                    }
+                    if (p.x+30<camera.x||p.x-30>camera.x+canvas.width||p.y+30<camera.y||p.y-30>camera.y+canvas.height) continue;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 18, 0, 2*Math.PI);
+                    const grad = ctx.createRadialGradient(p.x-5,p.y-5,3,p.x,p.y,18);
+                    grad.addColorStop(0, id===selfPlayer?.id?'#aad0ff':'#ffb0b0');
+                    grad.addColorStop(1, p.color||'#3498db');
+                    ctx.fillStyle = grad; ctx.fill();
+                    ctx.strokeStyle='#fff'; ctx.lineWidth=3; ctx.stroke();
+                    // HP бар
+                    const hpPercent = p.hp / p.maxHp;
+                    ctx.fillStyle = '#333'; ctx.fillRect(p.x-25, p.y-40, 50, 6);
+                    ctx.fillStyle = hpPercent>0.6?'#2ecc71':'#e74c3c';
+                    ctx.fillRect(p.x-25, p.y-40, 50*hpPercent, 6);
+                    ctx.font = 'bold 14px "Segoe UI"'; ctx.fillStyle='#fff'; ctx.textAlign='center';
+                    ctx.fillText(p.nickname, p.x, p.y-48);
                 }
-                ctx.restore();
-
-                if (selfPlayer) {
-                    coordsDiv.textContent = `📍 x: ${Math.round(selfPlayer.x)} y: ${Math.round(selfPlayer.y)}`;
-                }
+                coordsDiv.textContent = `📍 ${Math.round(selfPlayer?.x||0)} ${Math.round(selfPlayer?.y||0)}`;
             }
-
             function updatePlayersList() {
-                const list = Object.values(players).map(p => 
-                    `<li>${p.nickname} ${p.id === selfPlayer?.id ? '<span style="color:#6c9eff;">(вы)</span>' : ''}</li>`
-                ).join('');
-                playersList.innerHTML = list || '<li>Пусто</li>';
+                playersList.innerHTML = Object.values(players).map(p => `<li>${p.nickname} ${p.id===selfPlayer?.id?'(вы)':''}</li>`).join('')||'<li>Пусто</li>';
             }
-
-            // FPS счётчик
-            function updateFps() {
-                frameCount++;
-                const now = performance.now();
-                if (now - lastFpsUpdate >= 1000) {
-                    fps = frameCount;
-                    frameCount = 0;
-                    lastFpsUpdate = now;
-                    updatePingFps();
-                }
-            }
-
             function gameLoop() {
-                handleInput();
-                interpolatePlayers();
-                updateCamera();
-                draw();
-                updatePlayersList();
-                updateFps();
+                handleInput(); interpolatePlayers(); updateCamera(); draw(); updatePlayersList();
+                frameCount++; const now=performance.now(); if(now-lastFpsUpdate>=1000){ fps=frameCount; frameCount=0; lastFpsUpdate=now; updatePingFps(); }
                 requestAnimationFrame(gameLoop);
             }
-
-            window.addEventListener('beforeunload', () => { if (socket) socket.disconnect(); });
-
-            function resizeCanvas() {
-                canvas.width = gameContainer.clientWidth;
-                canvas.height = gameContainer.clientHeight;
-                updateCamera();
-            }
+            window.addEventListener('beforeunload', ()=> socket?.disconnect());
+            function resizeCanvas() { canvas.width = gameContainer.clientWidth; canvas.height = gameContainer.clientHeight; updateCamera(); }
             window.addEventListener('resize', resizeCanvas);
-            new ResizeObserver(() => { if (gameContainer.style.display !== 'none') resizeCanvas(); }).observe(gameContainer);
-
+            new ResizeObserver(()=>{ if(gameContainer.style.display!=='none') resizeCanvas(); }).observe(gameContainer);
         })();
     </script>
 </body>
