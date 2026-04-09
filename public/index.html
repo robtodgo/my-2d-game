@@ -3,242 +3,230 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Among Us 2D · Исправлено</title>
+    <title>2D Peak Climber</title>
     <style>
-        body {
-            margin: 0; padding: 0;
-            background: #0b0e14;
-            display: flex; justify-content: center; align-items: center;
-            min-height: 100vh;
-            font-family: 'Segoe UI', sans-serif;
-        }
-        #login-panel {
-            background: #1e2432dd; backdrop-filter: blur(8px);
-            padding: 30px; border-radius: 20px; color: white;
-            text-align: center; border: 1px solid #6c9eff;
-            width: 300px;
-        }
-        #login-panel input {
-            padding: 12px; font-size: 16px; border-radius: 8px;
-            border: none; background: #2a3348; color: white;
-            margin: 15px 0; width: 100%;
-        }
-        #login-panel button {
-            padding: 12px; background: #6c9eff; border: none;
-            border-radius: 8px; color: white; font-weight: bold;
-            cursor: pointer; width: 100%;
-        }
+        body { margin: 0; padding: 0; background: #1a1e2c; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Segoe UI', sans-serif; }
+        #login-panel { background: #2a2f42dd; backdrop-filter: blur(8px); padding: 30px; border-radius: 20px; color: white; text-align: center; border: 1px solid #6c9eff; width: 300px; }
+        #login-panel input { padding: 12px; font-size: 16px; border-radius: 8px; border: none; background: #2a3348; color: white; margin: 15px 0; width: 100%; }
+        #login-panel button { padding: 12px; background: #6c9eff; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; width: 100%; }
         #error-msg { color: #ff7b7b; margin-top: 10px; }
-        #game-container {
-            display: none; position: relative;
-            width: 100vw; height: 100vh; justify-content: center; align-items: center;
-        }
-        canvas {
-            display: block; background: #1a2a3a;
-            border-radius: 8px; box-shadow: 0 0 20px #00000050;
-            max-width: 100%; max-height: 100%; object-fit: contain;
-        }
-        #players-list {
-            position: absolute; top: 15px; right: 15px;
-            background: rgba(0,0,0,0.6); color: white; padding: 8px 16px;
-            border-radius: 20px; font-size: 14px; pointer-events: none;
-        }
-        #ping {
-            position: absolute; bottom: 15px; left: 15px;
-            color: #aaa; font-size: 13px; background: #00000060;
-            padding: 4px 12px; border-radius: 20px;
-        }
-        #version {
-            position: absolute; bottom: 15px; right: 15px;
-            color: #aaa; font-size: 12px;
-        }
-        .controls-hint {
-            position: absolute; bottom: 15px; left: 50%;
-            transform: translateX(-50%); color: #ccc;
-            background: #00000060; padding: 4px 16px;
-            border-radius: 20px; font-size: 13px;
-        }
+        #game-container { display: none; position: relative; }
+        canvas { display: block; background: #3a4a5a; border-radius: 8px; box-shadow: 0 0 20px #00000050; cursor: pointer; }
+        #ui { position: absolute; top: 20px; left: 20px; color: white; text-shadow: 1px 1px 2px black; background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 20px; pointer-events: none; }
+        #players-list { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.4); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px; pointer-events: none; }
+        #stamina-bar { position: absolute; bottom: 20px; left: 20px; width: 200px; height: 20px; background: #333; border-radius: 10px; overflow: hidden; }
+        #stamina-fill { height: 100%; width: 100%; background: #2ecc71; transition: width 0.1s; }
+        #stamina-text { position: absolute; bottom: 45px; left: 20px; color: white; font-size: 14px; }
+        #version { position: absolute; bottom: 20px; right: 20px; color: #aaa; font-size: 12px; }
+        .hold { transition: transform 0.1s; }
+        .hold:hover { transform: scale(1.1); filter: brightness(1.2); cursor: pointer; }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
     <div id="login-panel">
-        <h2>🕵️ Among Us 2D</h2>
+        <h2>🧗 2D Peak Climber</h2>
         <input type="text" id="nickname" placeholder="Ваш ник" maxlength="12" autocomplete="off">
+        <label for="color" style="color:white;">Цвет скалолаза:</label>
+        <input type="color" id="color" value="#e74c3c" style="width:100%; margin-bottom:15px;">
         <button id="join-btn">Войти</button>
         <div id="error-msg"></div>
-        <p style="color:#aaa; font-size:13px; margin-top:15px;">WASD / стрелки — двигаться</p>
+        <p style="color:#aaa; font-size:13px; margin-top:15px;">Кликни по зацепу, чтобы схватиться</p>
     </div>
 
     <div id="game-container">
-        <canvas id="canvas" width="1200" height="800"></canvas>
+        <canvas id="canvas" width="1000" height="700"></canvas>
+        <div id="ui">🧗 <span id="nickname-display"></span></div>
         <div id="players-list">👥 <span id="player-count">0</span></div>
-        <div id="ping">📶 -- ms</div>
-        <div class="controls-hint">🤖 3 бота уже на карте</div>
-        <div id="version">v1.1 · Fixed</div>
+        <div id="stamina-text">💪 Выносливость</div>
+        <div id="stamina-bar"><div id="stamina-fill"></div></div>
+        <div id="version">v1.0 · Peak Climber</div>
     </div>
 
     <script>
-        (function(){
-            const loginPanel = document.getElementById('login-panel');
-            const gameContainer = document.getElementById('game-container');
-            const canvas = document.getElementById('canvas');
-            const ctx = canvas.getContext('2d');
-            const nickInput = document.getElementById('nickname');
-            const joinBtn = document.getElementById('join-btn');
-            const errorMsg = document.getElementById('error-msg');
-            const playerCountSpan = document.getElementById('player-count');
-            const pingSpan = document.getElementById('ping');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const loginPanel = document.getElementById('login-panel');
+        const gameContainer = document.getElementById('game-container');
+        const joinBtn = document.getElementById('join-btn');
+        const nicknameInput = document.getElementById('nickname');
+        const colorInput = document.getElementById('color');
+        const errorMsg = document.getElementById('error-msg');
+        const nicknameDisplay = document.getElementById('nickname-display');
+        const playerCountSpan = document.getElementById('player-count');
+        const staminaFill = document.getElementById('stamina-fill');
+        const staminaText = document.getElementById('stamina-text');
 
-            let socket, selfPlayer = null;
-            const players = new Map();
-            const bots = new Map();
-            let walls = [];
-            const PLAYER_RADIUS = 18;
+        let socket;
+        let selfPlayer = null;
+        const players = new Map();
+        let wall = null;
 
-            const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
-            const SPEED = 4.5;
-            let latency = 0, lastPing = 0;
-
-            function collideWithWalls(x, y, r) {
-                for (const w of walls) {
-                    const closestX = Math.max(w.x, Math.min(x, w.x + w.w));
-                    const closestY = Math.max(w.y, Math.min(y, w.y + w.h));
-                    if ((x-closestX)**2 + (y-closestY)**2 < r*r) return true;
-                }
-                if (x - r < 0 || x + r > canvas.width || y - r < 0 || y + r > canvas.height) return true;
-                return false;
+        // Подключение к серверу
+        joinBtn.addEventListener('click', () => {
+            const nickname = nicknameInput.value.trim();
+            if (!nickname) {
+                errorMsg.textContent = 'Введите ник';
+                return;
             }
+            const color = colorInput.value;
 
-            function draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // Стены
-                ctx.fillStyle = '#4a3a2a';
-                walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
-                
-                // Игроки
-                for (const p of players.values()) {
-                    drawPlayer(p.x, p.y, p.color, p.nickname, p.id === selfPlayer?.id);
-                }
-                // Боты
-                for (const b of bots.values()) {
-                    drawPlayer(b.x, b.y, b.color, b.nickname, false);
-                }
-                
-                playerCountSpan.textContent = players.size + bots.size;
-            }
-
-            function drawPlayer(x, y, color, name, isSelf) {
-                ctx.shadowColor = '#00000080';
-                ctx.shadowBlur = 10;
-                ctx.beginPath();
-                ctx.arc(x, y, PLAYER_RADIUS, 0, 2*Math.PI);
-                ctx.fillStyle = color;
-                ctx.fill();
-                ctx.shadowBlur = 0;
-                ctx.strokeStyle = isSelf ? '#fff' : '#000';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-                
-                ctx.font = 'bold 14px "Segoe UI"';
-                ctx.fillStyle = '#fff';
-                ctx.shadowColor = '#000';
-                ctx.shadowBlur = 4;
-                ctx.textAlign = 'center';
-                ctx.fillText(name + (isSelf ? ' (вы)' : ''), x, y - 28);
-                ctx.shadowBlur = 0;
-            }
-
-            function handleInput() {
-                if (!selfPlayer) return;
-                let dx = 0, dy = 0;
-                if (keys.w || keys.ArrowUp) dy -= 1;
-                if (keys.s || keys.ArrowDown) dy += 1;
-                if (keys.a || keys.ArrowLeft) dx -= 1;
-                if (keys.d || keys.ArrowRight) dx += 1;
-                if (dx !== 0 || dy !== 0) {
-                    const len = Math.hypot(dx, dy);
-                    dx = dx/len * SPEED;
-                    dy = dy/len * SPEED;
-                    const nx = selfPlayer.x + dx, ny = selfPlayer.y + dy;
-                    if (!collideWithWalls(nx, ny, PLAYER_RADIUS)) {
-                        selfPlayer.x = nx; selfPlayer.y = ny;
-                        socket.emit('move', { x: nx, y: ny });
+            socket = io();
+            socket.on('connect', () => {
+                socket.emit('join', { nickname, color }, (res) => {
+                    if (res.success) {
+                        selfPlayer = res.players.find(p => p.id === socket.id);
+                        res.players.forEach(p => players.set(p.id, p));
+                        wall = res.wall;
+                        
+                        loginPanel.style.display = 'none';
+                        gameContainer.style.display = 'block';
+                        nicknameDisplay.textContent = selfPlayer.nickname;
+                        
+                        requestAnimationFrame(gameLoop);
+                    } else {
+                        errorMsg.textContent = 'Ошибка подключения';
+                        socket.disconnect();
                     }
+                });
+            });
+
+            socket.on('playerJoined', (player) => players.set(player.id, player));
+            socket.on('playerLeft', (id) => players.delete(id));
+            socket.on('playerMoved', (player) => players.set(player.id, player));
+            socket.on('playerFell', (id) => {
+                const player = players.get(id);
+                if (player) player.fall = true;
+                if (id === selfPlayer?.id) alert('Вы сорвались! Обновите страницу, чтобы начать заново.');
+            });
+            socket.on('grabFailed', (data) => alert(data.reason));
+        });
+
+        // Отрисовка
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Фон (гора)
+            ctx.fillStyle = '#2c3e50';
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height);
+            ctx.lineTo(200, 200);
+            ctx.lineTo(400, 100);
+            ctx.lineTo(600, 300);
+            ctx.lineTo(800, 50);
+            ctx.lineTo(1000, 150);
+            ctx.lineTo(canvas.width, canvas.height);
+            ctx.fill();
+            
+            // Зацепы
+            if (wall) {
+                wall.holds.forEach(hold => {
+                    ctx.fillStyle = hold.type === 'good' ? '#2ecc71' : (hold.type === 'bad' ? '#e74c3c' : '#f1c40f');
+                    ctx.beginPath();
+                    ctx.arc(hold.x, hold.y, 15, 0, 2 * Math.PI);
+                    ctx.fill();
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                });
+            }
+
+            // Игроки
+            players.forEach(player => {
+                if (player.fall) return;
+                
+                const leftHold = wall?.holds.find(h => h.id === player.leftHand?.holdId);
+                const rightHold = wall?.holds.find(h => h.id === player.rightHand?.holdId);
+                
+                if (leftHold && rightHold) {
+                    // Тело (прямоугольник)
+                    const centerX = (leftHold.x + rightHold.x) / 2;
+                    const centerY = (leftHold.y + rightHold.y) / 2 - 20;
+                    ctx.fillStyle = player.color;
+                    ctx.fillRect(centerX - 15, centerY - 30, 30, 60);
+                    
+                    // Голова
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY - 40, 15, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#f1c40f';
+                    ctx.fill();
+                    
+                    // Руки
+                    ctx.strokeStyle = player.color;
+                    ctx.lineWidth = 8;
+                    ctx.beginPath();
+                    ctx.moveTo(leftHold.x, leftHold.y);
+                    ctx.lineTo(centerX - 10, centerY - 10);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(rightHold.x, rightHold.y);
+                    ctx.lineTo(centerX + 10, centerY - 10);
+                    ctx.stroke();
+                    
+                    // Ник
+                    ctx.font = 'bold 14px "Segoe UI"';
+                    ctx.fillStyle = '#fff';
+                    ctx.shadowColor = '#000';
+                    ctx.shadowBlur = 4;
+                    ctx.textAlign = 'center';
+                    ctx.fillText(player.nickname, centerX, centerY - 60);
+                    ctx.shadowBlur = 0;
                 }
-            }
-
-            function gameLoop() {
-                handleInput();
-                draw();
-                requestAnimationFrame(gameLoop);
-            }
-
-            joinBtn.addEventListener('click', () => {
-                const nick = nickInput.value.trim().substring(0,12);
-                if (!nick) { errorMsg.textContent = 'Введите ник'; return; }
-                socket = io();
-                socket.on('connect', () => {
-                    socket.emit('join', nick, (res) => {
-                        if (res.ok) {
-                            selfPlayer = res.self;
-                            players.clear();
-                            res.players.forEach(p => players.set(p.id, p));
-                            bots.clear();
-                            res.bots.forEach(b => bots.set(b.id, b));
-                            walls = res.walls;
-                            loginPanel.style.display = 'none';
-                            gameContainer.style.display = 'flex';
-                            requestAnimationFrame(gameLoop);
-                            lastPing = performance.now(); socket.emit('ping');
-                        } else {
-                            errorMsg.textContent = res.msg;
-                            socket.disconnect();
-                        }
-                    });
-                });
-                socket.on('player joined', (p) => players.set(p.id, p));
-                socket.on('player left', (id) => players.delete(id));
-                socket.on('player moved', (data) => {
-                    const p = players.get(data.id); if (p) { p.x = data.x; p.y = data.y; }
-                });
-                socket.on('bots update', (updated) => {
-                    bots.clear(); updated.forEach(b => bots.set(b.id, b));
-                });
-                socket.on('pong', () => {
-                    latency = Math.round(performance.now() - lastPing);
-                    pingSpan.textContent = `📶 ${latency} ms`;
-                });
-                setInterval(() => { if (socket?.connected) { lastPing=performance.now(); socket.emit('ping'); } }, 1000);
             });
 
-            nickInput.addEventListener('keypress', (e) => { if (e.key==='Enter') joinBtn.click(); });
-
-            window.addEventListener('keydown', (e) => {
-                const k = e.key.toLowerCase();
-                if (k in keys) { keys[k] = true; e.preventDefault(); }
-                if (e.key.startsWith('Arrow')) e.preventDefault();
-            });
-            window.addEventListener('keyup', (e) => {
-                const k = e.key.toLowerCase();
-                if (k in keys) { keys[k] = false; e.preventDefault(); }
-                if (e.key.startsWith('Arrow')) e.preventDefault();
-            });
-            window.addEventListener('blur', () => { for (let k in keys) keys[k] = false; });
-
-            function resizeCanvas() {
-                const container = gameContainer;
-                const targetW = 1200, targetH = 800;
-                const scale = Math.min(container.clientWidth / targetW, container.clientHeight / targetH);
-                canvas.style.width = targetW * scale + 'px';
-                canvas.style.height = targetH * scale + 'px';
+            // Обновление UI
+            playerCountSpan.textContent = players.size;
+            if (selfPlayer) {
+                const percent = (selfPlayer.stamina / selfPlayer.maxStamina) * 100;
+                staminaFill.style.width = percent + '%';
+                staminaText.textContent = `💪 Выносливость: ${selfPlayer.stamina}/${selfPlayer.maxStamina}`;
             }
-            window.addEventListener('resize', resizeCanvas);
-            // Наблюдаем за появлением контейнера
-            const observer = new ResizeObserver(() => { if (gameContainer.style.display !== 'none') resizeCanvas(); });
-            observer.observe(gameContainer);
-        })();
+        }
+
+        // Обработка кликов по зацепам
+        canvas.addEventListener('click', (e) => {
+            if (!selfPlayer || selfPlayer.fall) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const mouseX = (e.clientX - rect.left) * scaleX;
+            const mouseY = (e.clientY - rect.top) * scaleY;
+            
+            // Находим ближайший зацеп
+            let closestHold = null;
+            let minDist = 30;
+            wall.holds.forEach(hold => {
+                const dist = Math.hypot(hold.x - mouseX, hold.y - mouseY);
+                if (dist < minDist) {
+                    minDist = dist;
+                    closestHold = hold;
+                }
+            });
+            
+            if (closestHold) {
+                // Определяем, какой рукой хвататься (более свободной)
+                const leftDist = selfPlayer.leftHand ? Math.hypot(closestHold.x - wall.holds.find(h => h.id === selfPlayer.leftHand.holdId).x, closestHold.y - wall.holds.find(h => h.id === selfPlayer.leftHand.holdId).y) : 0;
+                const rightDist = selfPlayer.rightHand ? Math.hypot(closestHold.x - wall.holds.find(h => h.id === selfPlayer.rightHand.holdId).x, closestHold.y - wall.holds.find(h => h.id === selfPlayer.rightHand.holdId).y) : 0;
+                const hand = (!selfPlayer.leftHand || (selfPlayer.rightHand && leftDist < rightDist)) ? 'left' : 'right';
+                socket.emit('grab', { hand, holdId: closestHold.id });
+            }
+        });
+
+        // Восстановление выносливости (каждые 2 секунды, если не двигается)
+        let lastMove = Date.now();
+        setInterval(() => {
+            if (selfPlayer && !selfPlayer.fall && Date.now() - lastMove > 2000) {
+                socket.emit('rest');
+            }
+        }, 2000);
+        
+        socket.on('playerMoved', () => { lastMove = Date.now(); });
+
+        function gameLoop() {
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
     </script>
 </body>
 </html>
