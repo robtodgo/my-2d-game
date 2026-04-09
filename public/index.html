@@ -3,27 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>2D Among Us</title>
+    <title>Among Us 2D · Исправлено</title>
     <style>
-        body { margin: 0; padding: 0; background: #0b0e14; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Segoe UI', sans-serif; }
-        #login-panel {
-            background: #1e2432dd; backdrop-filter: blur(8px); padding: 30px;
-            border-radius: 20px; color: white; text-align: center;
-            border: 1px solid #6c9eff; width: 300px;
+        body {
+            margin: 0; padding: 0;
+            background: #0b0e14;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
         }
-        #login-panel input { padding: 12px; font-size: 16px; border-radius: 8px; border: none; background: #2a3348; color: white; margin: 15px 0; width: 100%; }
-        #login-panel button { padding: 12px; background: #6c9eff; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; width: 100%; }
+        #login-panel {
+            background: #1e2432dd; backdrop-filter: blur(8px);
+            padding: 30px; border-radius: 20px; color: white;
+            text-align: center; border: 1px solid #6c9eff;
+            width: 300px;
+        }
+        #login-panel input {
+            padding: 12px; font-size: 16px; border-radius: 8px;
+            border: none; background: #2a3348; color: white;
+            margin: 15px 0; width: 100%;
+        }
+        #login-panel button {
+            padding: 12px; background: #6c9eff; border: none;
+            border-radius: 8px; color: white; font-weight: bold;
+            cursor: pointer; width: 100%;
+        }
         #error-msg { color: #ff7b7b; margin-top: 10px; }
-        #game-container { display: none; position: relative; }
-        canvas { display: block; background: #1a2a3a; border-radius: 8px; box-shadow: 0 0 20px #00000050; }
+        #game-container {
+            display: none; position: relative;
+            width: 100vw; height: 100vh; justify-content: center; align-items: center;
+        }
+        canvas {
+            display: block; background: #1a2a3a;
+            border-radius: 8px; box-shadow: 0 0 20px #00000050;
+            max-width: 100%; max-height: 100%; object-fit: contain;
+        }
         #players-list {
             position: absolute; top: 15px; right: 15px;
             background: rgba(0,0,0,0.6); color: white; padding: 8px 16px;
             border-radius: 20px; font-size: 14px; pointer-events: none;
         }
-        #ping { position: absolute; bottom: 15px; left: 15px; color: #aaa; font-size: 13px; background: #00000060; padding: 4px 12px; border-radius: 20px; }
-        #version { position: absolute; bottom: 15px; right: 15px; color: #aaa; font-size: 12px; }
-        .controls-hint { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); color: #ccc; background: #00000060; padding: 4px 16px; border-radius: 20px; font-size: 13px; }
+        #ping {
+            position: absolute; bottom: 15px; left: 15px;
+            color: #aaa; font-size: 13px; background: #00000060;
+            padding: 4px 12px; border-radius: 20px;
+        }
+        #version {
+            position: absolute; bottom: 15px; right: 15px;
+            color: #aaa; font-size: 12px;
+        }
+        .controls-hint {
+            position: absolute; bottom: 15px; left: 50%;
+            transform: translateX(-50%); color: #ccc;
+            background: #00000060; padding: 4px 16px;
+            border-radius: 20px; font-size: 13px;
+        }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
@@ -41,173 +75,170 @@
         <div id="players-list">👥 <span id="player-count">0</span></div>
         <div id="ping">📶 -- ms</div>
         <div class="controls-hint">🤖 3 бота уже на карте</div>
-        <div id="version">v1.0 · Among Us style</div>
+        <div id="version">v1.1 · Fixed</div>
     </div>
 
     <script>
-        const loginPanel = document.getElementById('login-panel');
-        const gameContainer = document.getElementById('game-container');
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        const nickInput = document.getElementById('nickname');
-        const joinBtn = document.getElementById('join-btn');
-        const errorMsg = document.getElementById('error-msg');
-        const playerCountSpan = document.getElementById('player-count');
-        const pingSpan = document.getElementById('ping');
+        (function(){
+            const loginPanel = document.getElementById('login-panel');
+            const gameContainer = document.getElementById('game-container');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const nickInput = document.getElementById('nickname');
+            const joinBtn = document.getElementById('join-btn');
+            const errorMsg = document.getElementById('error-msg');
+            const playerCountSpan = document.getElementById('player-count');
+            const pingSpan = document.getElementById('ping');
 
-        let socket;
-        let selfPlayer = null;
-        const players = new Map();     // id -> player
-        const bots = new Map();        // id -> bot
-        let walls = [];
-        const PLAYER_RADIUS = 18;
+            let socket, selfPlayer = null;
+            const players = new Map();
+            const bots = new Map();
+            let walls = [];
+            const PLAYER_RADIUS = 18;
 
-        // Управление
-        const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
-        const SPEED = 4.5;
-        let lastPing = 0, latency = 0;
+            const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
+            const SPEED = 4.5;
+            let latency = 0, lastPing = 0;
 
-        // Подключение
-        joinBtn.addEventListener('click', () => {
-            const nick = nickInput.value.trim().substring(0,12);
-            if (!nick) { errorMsg.textContent = 'Введите ник'; return; }
-            socket = io();
-            socket.on('connect', () => {
-                socket.emit('join', nick, (res) => {
-                    if (res.ok) {
-                        selfPlayer = res.self;
-                        res.players.forEach(p => players.set(p.id, p));
-                        res.bots.forEach(b => bots.set(b.id, b));
-                        walls = res.walls;
-                        loginPanel.style.display = 'none';
-                        gameContainer.style.display = 'block';
-                        requestAnimationFrame(gameLoop);
-                        lastPing = performance.now();
-                        socket.emit('ping');
-                    } else {
-                        errorMsg.textContent = res.msg;
-                        socket.disconnect();
+            function collideWithWalls(x, y, r) {
+                for (const w of walls) {
+                    const closestX = Math.max(w.x, Math.min(x, w.x + w.w));
+                    const closestY = Math.max(w.y, Math.min(y, w.y + w.h));
+                    if ((x-closestX)**2 + (y-closestY)**2 < r*r) return true;
+                }
+                if (x - r < 0 || x + r > canvas.width || y - r < 0 || y + r > canvas.height) return true;
+                return false;
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Стены
+                ctx.fillStyle = '#4a3a2a';
+                walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
+                
+                // Игроки
+                for (const p of players.values()) {
+                    drawPlayer(p.x, p.y, p.color, p.nickname, p.id === selfPlayer?.id);
+                }
+                // Боты
+                for (const b of bots.values()) {
+                    drawPlayer(b.x, b.y, b.color, b.nickname, false);
+                }
+                
+                playerCountSpan.textContent = players.size + bots.size;
+            }
+
+            function drawPlayer(x, y, color, name, isSelf) {
+                ctx.shadowColor = '#00000080';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.arc(x, y, PLAYER_RADIUS, 0, 2*Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.strokeStyle = isSelf ? '#fff' : '#000';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                
+                ctx.font = 'bold 14px "Segoe UI"';
+                ctx.fillStyle = '#fff';
+                ctx.shadowColor = '#000';
+                ctx.shadowBlur = 4;
+                ctx.textAlign = 'center';
+                ctx.fillText(name + (isSelf ? ' (вы)' : ''), x, y - 28);
+                ctx.shadowBlur = 0;
+            }
+
+            function handleInput() {
+                if (!selfPlayer) return;
+                let dx = 0, dy = 0;
+                if (keys.w || keys.ArrowUp) dy -= 1;
+                if (keys.s || keys.ArrowDown) dy += 1;
+                if (keys.a || keys.ArrowLeft) dx -= 1;
+                if (keys.d || keys.ArrowRight) dx += 1;
+                if (dx !== 0 || dy !== 0) {
+                    const len = Math.hypot(dx, dy);
+                    dx = dx/len * SPEED;
+                    dy = dy/len * SPEED;
+                    const nx = selfPlayer.x + dx, ny = selfPlayer.y + dy;
+                    if (!collideWithWalls(nx, ny, PLAYER_RADIUS)) {
+                        selfPlayer.x = nx; selfPlayer.y = ny;
+                        socket.emit('move', { x: nx, y: ny });
                     }
-                });
-            });
-            socket.on('player joined', (p) => players.set(p.id, p));
-            socket.on('player left', (id) => players.delete(id));
-            socket.on('player moved', (data) => { const p = players.get(data.id); if (p) { p.x = data.x; p.y = data.y; } });
-            socket.on('bots update', (updatedBots) => {
-                bots.clear();
-                updatedBots.forEach(b => bots.set(b.id, b));
-            });
-            socket.on('pong', () => { latency = Math.round(performance.now() - lastPing); pingSpan.textContent = `📶 ${latency} ms`; });
-            setInterval(() => { if (socket?.connected) { lastPing = performance.now(); socket.emit('ping'); } }, 1000);
-        });
-
-        nickInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') joinBtn.click(); });
-
-        // Управление
-        window.addEventListener('keydown', (e) => {
-            const k = e.key.toLowerCase();
-            if (k in keys) { keys[k] = true; e.preventDefault(); }
-            if (e.key.startsWith('Arrow')) e.preventDefault();
-        });
-        window.addEventListener('keyup', (e) => {
-            const k = e.key.toLowerCase();
-            if (k in keys) { keys[k] = false; e.preventDefault(); }
-            if (e.key.startsWith('Arrow')) e.preventDefault();
-        });
-        window.addEventListener('blur', () => { for (let k in keys) keys[k] = false; });
-
-        // Движение
-        function handleInput() {
-            if (!selfPlayer) return;
-            let dx = 0, dy = 0;
-            if (keys.w || keys.ArrowUp) dy -= 1;
-            if (keys.s || keys.ArrowDown) dy += 1;
-            if (keys.a || keys.ArrowLeft) dx -= 1;
-            if (keys.d || keys.ArrowRight) dx += 1;
-            if (dx !== 0 || dy !== 0) {
-                const len = Math.hypot(dx, dy);
-                dx = dx / len * SPEED;
-                dy = dy / len * SPEED;
-                const newX = selfPlayer.x + dx;
-                const newY = selfPlayer.y + dy;
-                // Предварительная проверка на клиенте (оптимистично)
-                if (!collideWithWalls(newX, newY, PLAYER_RADIUS)) {
-                    selfPlayer.x = newX;
-                    selfPlayer.y = newY;
-                    socket.emit('move', { x: newX, y: newY });
                 }
             }
-        }
 
-        function collideWithWalls(x, y, r) {
-            for (const w of walls) {
-                const closestX = Math.max(w.x, Math.min(x, w.x + w.w));
-                const closestY = Math.max(w.y, Math.min(y, w.y + w.h));
-                const dx = x - closestX, dy = y - closestY;
-                if (dx*dx + dy*dy < r*r) return true;
+            function gameLoop() {
+                handleInput();
+                draw();
+                requestAnimationFrame(gameLoop);
             }
-            if (x - r < 0 || x + r > canvas.width || y - r < 0 || y + r > canvas.height) return true;
-            return false;
-        }
 
-        // Отрисовка
-        function draw() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Стены
-            ctx.fillStyle = '#4a3a2a';
-            walls.forEach(w => ctx.fillRect(w.x, w.y, w.w, w.h));
-            
-            // Игроки
-            for (const p of players.values()) {
-                drawPlayer(p.x, p.y, p.color, p.nickname, p.id === selfPlayer?.id);
+            joinBtn.addEventListener('click', () => {
+                const nick = nickInput.value.trim().substring(0,12);
+                if (!nick) { errorMsg.textContent = 'Введите ник'; return; }
+                socket = io();
+                socket.on('connect', () => {
+                    socket.emit('join', nick, (res) => {
+                        if (res.ok) {
+                            selfPlayer = res.self;
+                            players.clear();
+                            res.players.forEach(p => players.set(p.id, p));
+                            bots.clear();
+                            res.bots.forEach(b => bots.set(b.id, b));
+                            walls = res.walls;
+                            loginPanel.style.display = 'none';
+                            gameContainer.style.display = 'flex';
+                            requestAnimationFrame(gameLoop);
+                            lastPing = performance.now(); socket.emit('ping');
+                        } else {
+                            errorMsg.textContent = res.msg;
+                            socket.disconnect();
+                        }
+                    });
+                });
+                socket.on('player joined', (p) => players.set(p.id, p));
+                socket.on('player left', (id) => players.delete(id));
+                socket.on('player moved', (data) => {
+                    const p = players.get(data.id); if (p) { p.x = data.x; p.y = data.y; }
+                });
+                socket.on('bots update', (updated) => {
+                    bots.clear(); updated.forEach(b => bots.set(b.id, b));
+                });
+                socket.on('pong', () => {
+                    latency = Math.round(performance.now() - lastPing);
+                    pingSpan.textContent = `📶 ${latency} ms`;
+                });
+                setInterval(() => { if (socket?.connected) { lastPing=performance.now(); socket.emit('ping'); } }, 1000);
+            });
+
+            nickInput.addEventListener('keypress', (e) => { if (e.key==='Enter') joinBtn.click(); });
+
+            window.addEventListener('keydown', (e) => {
+                const k = e.key.toLowerCase();
+                if (k in keys) { keys[k] = true; e.preventDefault(); }
+                if (e.key.startsWith('Arrow')) e.preventDefault();
+            });
+            window.addEventListener('keyup', (e) => {
+                const k = e.key.toLowerCase();
+                if (k in keys) { keys[k] = false; e.preventDefault(); }
+                if (e.key.startsWith('Arrow')) e.preventDefault();
+            });
+            window.addEventListener('blur', () => { for (let k in keys) keys[k] = false; });
+
+            function resizeCanvas() {
+                const container = gameContainer;
+                const targetW = 1200, targetH = 800;
+                const scale = Math.min(container.clientWidth / targetW, container.clientHeight / targetH);
+                canvas.style.width = targetW * scale + 'px';
+                canvas.style.height = targetH * scale + 'px';
             }
-            // Боты
-            for (const b of bots.values()) {
-                drawPlayer(b.x, b.y, b.color, b.nickname, false);
-            }
-            
-            playerCountSpan.textContent = players.size + bots.size;
-        }
-
-        function drawPlayer(x, y, color, name, isSelf) {
-            ctx.shadowColor = '#00000080';
-            ctx.shadowBlur = 10;
-            ctx.beginPath();
-            ctx.arc(x, y, PLAYER_RADIUS, 0, 2*Math.PI);
-            ctx.fillStyle = color;
-            ctx.fill();
-            ctx.shadowBlur = 0;
-            ctx.strokeStyle = isSelf ? '#fff' : '#000';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
-            // Ник
-            ctx.font = 'bold 14px "Segoe UI"';
-            ctx.fillStyle = '#fff';
-            ctx.shadowColor = '#000';
-            ctx.shadowBlur = 4;
-            ctx.textAlign = 'center';
-            ctx.fillText(name + (isSelf ? ' (вы)' : ''), x, y - 28);
-            ctx.shadowBlur = 0;
-        }
-
-        function gameLoop() {
-            handleInput();
-            draw();
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Ресайз канваса (сохраняем соотношение)
-        function resizeCanvas() {
-            const container = gameContainer;
-            const targetWidth = 1200, targetHeight = 800;
-            const scale = Math.min(container.clientWidth / targetWidth, container.clientHeight / targetHeight);
-            canvas.style.width = targetWidth * scale + 'px';
-            canvas.style.height = targetHeight * scale + 'px';
-        }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            // Наблюдаем за появлением контейнера
+            const observer = new ResizeObserver(() => { if (gameContainer.style.display !== 'none') resizeCanvas(); });
+            observer.observe(gameContainer);
+        })();
     </script>
 </body>
 </html>
