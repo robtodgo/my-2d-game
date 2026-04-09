@@ -65,7 +65,10 @@ io.on('connection', (socket) => {
         const acc = accounts.get(nickname);
         if (!acc || acc.password !== password) return callback({ ok: false, msg: 'Неверный логин/пароль' });
         if (bans.has(acc.ip)) return callback({ ok: false, msg: 'Ваш IP забанен' });
-        if (onlineIPs.has(clientIp)) return callback({ ok: false, msg: 'С этого IP уже играют' });
+
+        if (onlineIPs.has(clientIp)) {
+            return callback({ ok: false, msg: 'С этого IP уже кто-то играет' });
+        }
 
         for (const [id, p] of players.entries()) {
             if (p.nickname === nickname) {
@@ -88,6 +91,7 @@ io.on('connection', (socket) => {
         callback({ ok: true, canvas, online: getOnlineList(), cooldown: globalCooldown });
         io.emit('online update', getOnlineList());
         io.emit('chat message', { sender: '📢', text: `${nickname} присоединился` });
+        console.log(`>> ${nickname}`);
     });
 
     socket.on('auto login', (nickname, callback) => {
@@ -129,8 +133,9 @@ io.on('connection', (socket) => {
         if (gridX < 0 || gridX >= canvas.length || gridY < 0 || gridY >= canvas[0].length)
             return callback({ ok: false, msg: 'За пределами холста' });
 
-        if (canvas[gridX][gridY] === color)
+        if (canvas[gridX][gridY] === color) {
             return callback({ ok: false, msg: 'Здесь уже такой цвет' });
+        }
 
         canvas[gridX][gridY] = color;
         player.lastDraw = now;
@@ -150,7 +155,6 @@ io.on('connection', (socket) => {
         const player = players.get(socket.id);
         if (!player) return;
         const args = cmd.split(' ');
-        // Проверка админ-пароля (жёстко задан в коде)
         if (args[0] === '/op' && args[1] === '55332') {
             player.isAdmin = true;
             socket.emit('admin status', true);
@@ -199,6 +203,7 @@ io.on('connection', (socket) => {
             players.delete(socket.id);
             io.emit('online update', getOnlineList());
             io.emit('chat message', { sender: '📢', text: `${player.nickname} вышел` });
+            console.log(`-- ${player.nickname}`);
         }
     });
 });

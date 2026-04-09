@@ -11,6 +11,10 @@
             background: #0f1219; color: #e0e5f0;
             font-family: 'Segoe UI', sans-serif;
             min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s, color 0.2s;
+        }
+        body.light-theme {
+            background: #f0f2f5; color: #1a1e2c;
         }
         #app { width: 100%; max-width: 1400px; padding: 10px; }
         #auth-panel {
@@ -18,16 +22,23 @@
             padding: 30px; border-radius: 24px; text-align: center;
             max-width: 400px; margin: 0 auto; border: 1px solid #3e4a6b;
         }
+        .light-theme #auth-panel {
+            background: #ffffffee; border-color: #ccc; color: #1a1e2c;
+        }
         .tab-btn {
             background: none; border: none; color: #8a9bb5;
             font-size: 18px; padding: 10px 20px; cursor: pointer;
             border-bottom: 3px solid transparent;
         }
+        .light-theme .tab-btn { color: #4a5a7a; }
         .tab-btn.active { color: #6c9eff; border-bottom-color: #6c9eff; }
         .input-field {
             padding: 12px; font-size: 16px; border-radius: 8px;
             border: none; background: #2a3348; color: white;
             margin: 10px 0; width: 100%;
+        }
+        .light-theme .input-field {
+            background: #e0e5f0; color: #1a1e2c;
         }
         .btn {
             padding: 12px 24px; background: #6c9eff; border: none;
@@ -44,37 +55,34 @@
             border-radius: 16px; padding: 15px; display: flex; flex-direction: column;
             border: 1px solid #3e4a6b;
         }
+        .light-theme .left-panel {
+            background: #ffffffee; border-color: #ccc; color: #1a1e2c;
+        }
         .online-box {
             background: #2a3348; border-radius: 12px; padding: 10px;
             margin-bottom: 10px; display: flex; justify-content: space-between;
             align-items: center;
         }
+        .light-theme .online-box { background: #e0e5f0; }
         .chat-messages {
             flex: 1; overflow-y: auto; background: #151a24; border-radius: 12px;
             padding: 10px; margin-bottom: 10px; font-size: 14px;
         }
+        .light-theme .chat-messages { background: #f8f9fc; }
         .chat-message { margin-bottom: 5px; word-break: break-word; }
-        .chat-input-container { display: flex; gap: 5px; position: relative; }
+        .chat-input-container { display: flex; gap: 5px; }
         .chat-input {
             flex: 1; padding: 10px; border-radius: 20px; border: none;
             background: #2a3348; color: white;
         }
-        .command-hints {
-            position: absolute; bottom: 50px; left: 0; right: 0;
-            background: #1e2432ee; border-radius: 12px; padding: 8px;
-            max-height: 150px; overflow-y: auto; display: none;
-            border: 1px solid #4a5a7a; z-index: 100;
-        }
-        .hint-item {
-            padding: 6px 10px; cursor: pointer; border-radius: 6px;
-        }
-        .hint-item:hover, .hint-item.selected { background: #3e4e6e; }
+        .light-theme .chat-input { background: #e0e5f0; color: #1a1e2c; }
         .center-panel { flex: 1; display: flex; flex-direction: column; align-items: center; }
         .canvas-container {
             background: #1e2432; padding: 10px; border-radius: 20px;
             box-shadow: 0 0 20px #00000050; border: 1px solid #3e4a6b;
             position: relative;
         }
+        .light-theme .canvas-container { background: #ddd; }
         canvas { display: block; background: white; border-radius: 12px; width: 100%; height: auto; cursor: none; }
         #preview-canvas {
             position: absolute; top: 10px; left: 10px;
@@ -84,12 +92,14 @@
             margin-top: 10px; width: 100%; height: 8px; background: #2a3348;
             border-radius: 4px; overflow: hidden;
         }
+        .light-theme .cooldown-bar { background: #ccc; }
         .cooldown-fill { height: 100%; width: 100%; background: #6c9eff; transition: width 0.1s; }
         .right-panel {
             width: 220px; background: #1e2432dd; backdrop-filter: blur(8px);
             border-radius: 16px; padding: 15px; border: 1px solid #3e4a6b;
             overflow-y: auto;
         }
+        .light-theme .right-panel { background: #ffffffee; border-color: #ccc; }
         .color-palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
         .color-swatch {
             aspect-ratio: 1; border-radius: 8px; border: 2px solid #4a5a7a;
@@ -101,6 +111,15 @@
         #toggle-chat-btn { background: #3e4e6e; padding: 5px 10px; font-size: 12px; }
         #status-msg { color: #ff7b7b; font-size: 13px; margin-top: 5px; }
         #admin-indicator { color: #f1c40f; margin-left: 10px; font-weight: bold; }
+        #command-hints {
+            background: #2a3348dd; border-radius: 8px; padding: 8px;
+            max-height: 150px; overflow-y: auto; font-size: 13px;
+            margin-bottom: 5px; display: none;
+        }
+        .light-theme #command-hints { background: #e0e5f0dd; }
+        .hint-item { padding: 4px 8px; cursor: pointer; border-radius: 4px; }
+        .hint-item:hover { background: #4a5a7a; }
+        #settings-btn { background: #3e4e6e; padding: 5px 10px; font-size: 12px; }
         @media (max-width: 800px) {
             .game-layout { flex-direction: column; height: auto; }
             .left-panel, .right-panel { width: 100%; }
@@ -134,13 +153,14 @@
                 <div class="online-box">
                     <span>👥 <span id="online-count">0</span></span>
                     <button class="btn" id="toggle-chat-btn">📌 Скрыть чат</button>
+                    <button class="btn" id="settings-btn">⚙️</button>
                     <button class="btn" id="logout-btn" style="padding:6px;">🚪 Выйти</button>
                 </div>
                 <div class="chat-messages" id="chat-messages"></div>
+                <div id="command-hints"></div>
                 <div class="chat-input-container">
-                    <input type="text" class="chat-input" id="chat-input" placeholder="Сообщение или /команда" maxlength="200" autocomplete="off">
+                    <input type="text" class="chat-input" id="chat-input" placeholder="Сообщение или /команда" maxlength="200">
                     <button class="btn" id="send-chat-btn">➤</button>
-                    <div class="command-hints" id="command-hints"></div>
                 </div>
             </div>
 
@@ -186,17 +206,17 @@
         const registerBtn = document.getElementById('register-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const toggleChatBtn = document.getElementById('toggle-chat-btn');
-        const chatPanel = document.getElementById('chat-panel');
+        const settingsBtn = document.getElementById('settings-btn');
         const onlineSpan = document.getElementById('online-count');
         const chatMessages = document.getElementById('chat-messages');
         const chatInput = document.getElementById('chat-input');
         const sendChatBtn = document.getElementById('send-chat-btn');
-        const commandHints = document.getElementById('command-hints');
         const cooldownFill = document.getElementById('cooldown-fill');
         const statusMsg = document.getElementById('status-msg');
         const adminIndicator = document.getElementById('admin-indicator');
         const colorPalette = document.getElementById('color-palette');
         const selectedColorPreview = document.getElementById('selected-color-preview');
+        const commandHints = document.getElementById('command-hints');
 
         // Состояние
         let socket, currentNick = null, canvasData = [];
@@ -205,12 +225,13 @@
         let selectedColor = '#ff0000';
         let isAdmin = false;
         let chatHidden = false;
+        let darkTheme = true;
 
-        // Доступные команды (для подсказок, без упоминания пароля)
-        const allCommands = ['/cooldown', '/ban', '/unban', '/clear', '/kick'];
-        let hintIndex = -1;
+        // Команды (админские видны только админу)
+        const publicCommands = ['/help'];
+        const adminCommands = ['/cooldown', '/ban', '/unban', '/clear', '/kick', '/op'];
 
-        // Палитра
+        // Палитра (32 цвета)
         const colors = ['#ffffff','#c0c0c0','#808080','#000000','#ff0000','#800000','#ffff00','#808000','#00ff00','#008000','#00ffff','#008080','#0000ff','#000080','#ff00ff','#800080','#ffa500','#ffc0cb','#a52a2a','#f5f5dc','#e6e6fa','#d3d3d3','#98fb98','#ffb6c1','#ffd700','#cd853f','#4b0082','#2e8b57','#dc143c','#1e90ff','#32cd32','#ff69b4'];
         colors.forEach(c => {
             const s = document.createElement('div'); s.className = 'color-swatch'; s.style.backgroundColor = c;
@@ -219,38 +240,57 @@
             colorPalette.appendChild(s);
         });
 
+        // Звук установки (короткий щелчок)
         const placeSound = new Audio('data:audio/wav;base64,UklGRlwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVoAAACAgICAf39/f3//AAAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//w==');
 
-        // Предпросмотр
-        let mouseX = -100, mouseY = -100;
-        function updatePreview(e) {
+        // Предпросмотр с чёрной обводкой
+        let mouseGridX = -1, mouseGridY = -1;
+        function updatePreview(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
-            mouseX = (e.clientX - rect.left) * scaleX;
-            mouseY = (e.clientY - rect.top) * scaleY;
+            const canvasX = (clientX - rect.left) * scaleX;
+            const canvasY = (clientY - rect.top) * scaleY;
+            if (canvasX < 0 || canvasX >= 800 || canvasY < 0 || canvasY >= 600) {
+                mouseGridX = mouseGridY = -1;
+            } else {
+                mouseGridX = Math.floor(canvasX / PIXEL_SIZE);
+                mouseGridY = Math.floor(canvasY / PIXEL_SIZE);
+            }
             drawPreview();
         }
         function drawPreview() {
             previewCtx.clearRect(0, 0, 800, 600);
-            if (mouseX < 0 || mouseY < 0 || mouseX >= 800 || mouseY >= 600) return;
-            const gx = Math.floor(mouseX / PIXEL_SIZE);
-            const gy = Math.floor(mouseY / PIXEL_SIZE);
-            const x = gx * PIXEL_SIZE;
-            const y = gy * PIXEL_SIZE;
+            if (mouseGridX === -1 || mouseGridY === -1) return;
+            const x = mouseGridX * PIXEL_SIZE;
+            const y = mouseGridY * PIXEL_SIZE;
             previewCtx.fillStyle = selectedColor + '80';
             previewCtx.fillRect(x, y, PIXEL_SIZE, PIXEL_SIZE);
             previewCtx.strokeStyle = '#000000';
             previewCtx.lineWidth = 2;
-            previewCtx.strokeRect(x + 1, y + 1, PIXEL_SIZE - 2, PIXEL_SIZE - 2);
+            previewCtx.strokeRect(x, y, PIXEL_SIZE, PIXEL_SIZE);
         }
-        canvas.addEventListener('mousemove', updatePreview);
-        canvas.addEventListener('mouseleave', () => { mouseX = mouseY = -100; drawPreview(); });
+        canvas.addEventListener('mousemove', (e) => updatePreview(e.clientX, e.clientY));
+        canvas.addEventListener('mouseleave', () => { mouseGridX = mouseGridY = -1; drawPreview(); });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); const touch = e.touches[0]; updatePreview(touch.clientX, touch.clientY); });
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); const touch = e.touches[0]; updatePreview(touch.clientX, touch.clientY); });
+        canvas.addEventListener('touchend', () => { mouseGridX = mouseGridY = -1; drawPreview(); });
+
+        // Тема
+        function setTheme(dark) {
+            darkTheme = dark;
+            document.body.classList.toggle('light-theme', !dark);
+            localStorage.setItem('pixel_theme', dark ? 'dark' : 'light');
+        }
+        const savedTheme = localStorage.getItem('pixel_theme');
+        if (savedTheme) setTheme(savedTheme === 'dark');
+        settingsBtn.addEventListener('click', () => setTheme(!darkTheme));
 
         // Сессия
         const savedNick = localStorage.getItem('pixelbattle_nick');
         if (savedNick) attemptAutoLogin(savedNick);
 
+        // Вкладки
         tabBtns.forEach(b => b.addEventListener('click', () => {
             tabBtns.forEach(t => t.classList.remove('active')); b.classList.add('active');
             loginForm.style.display = b.dataset.tab === 'login' ? 'block' : 'none';
@@ -291,7 +331,7 @@
             socket.on('force logout', () => { alert('Вас отключили'); logout(); });
             socket.on('banned', () => { alert('Вы забанены'); logout(); });
             socket.on('chat message', data => addChatMessage(data.sender, data.text));
-            socket.on('admin status', status => { isAdmin = status; adminIndicator.textContent = status ? '👑 ADMIN' : ''; });
+            socket.on('admin status', status => { isAdmin = status; adminIndicator.textContent = status ? '👑' : ''; });
             socket.on('cooldown update', cd => globalCooldown = cd);
             socket.on('canvas reset', newCanvas => { canvasData = newCanvas; renderCanvas(); });
         }
@@ -308,31 +348,28 @@
         // Подсказки команд
         function updateHints(input) {
             if (!input.startsWith('/')) { commandHints.style.display = 'none'; return; }
-            const query = input.slice(1).toLowerCase();
-            const matches = allCommands.filter(cmd => cmd.toLowerCase().includes(query));
-            if (matches.length === 0) { commandHints.style.display = 'none'; return; }
+            let available = publicCommands;
+            if (isAdmin) available = [...publicCommands, ...adminCommands];
+            const filtered = available.filter(c => c.startsWith(input.split(' ')[0]));
+            if (filtered.length === 0) { commandHints.style.display = 'none'; return; }
             commandHints.style.display = 'block';
-            commandHints.innerHTML = matches.map(cmd => `<div class="hint-item">${cmd}</div>`).join('');
-            hintIndex = -1;
-            document.querySelectorAll('.hint-item').forEach((el, idx) => {
-                el.addEventListener('click', () => { chatInput.value = el.textContent + ' '; commandHints.style.display = 'none'; chatInput.focus(); });
-                el.addEventListener('mouseenter', () => { document.querySelectorAll('.hint-item').forEach(e => e.classList.remove('selected')); el.classList.add('selected'); hintIndex = idx; });
+            commandHints.innerHTML = filtered.map(c => `<div class="hint-item" data-cmd="${c}">${c}</div>`).join('');
+            document.querySelectorAll('.hint-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    chatInput.value = el.dataset.cmd + ' ';
+                    chatInput.focus();
+                    updateHints(chatInput.value);
+                });
             });
         }
-
-        chatInput.addEventListener('input', (e) => updateHints(e.target.value));
+        chatInput.addEventListener('input', () => updateHints(chatInput.value));
         chatInput.addEventListener('keydown', (e) => {
-            if (commandHints.style.display === 'block') {
-                if (e.key === 'ArrowDown') { e.preventDefault(); hintIndex = (hintIndex + 1) % document.querySelectorAll('.hint-item').length; updateSelectedHint(); }
-                else if (e.key === 'ArrowUp') { e.preventDefault(); hintIndex = (hintIndex - 1 + document.querySelectorAll('.hint-item').length) % document.querySelectorAll('.hint-item').length; updateSelectedHint(); }
-                else if (e.key === 'Tab') { e.preventDefault(); const selected = document.querySelector('.hint-item.selected'); if (selected) { chatInput.value = selected.textContent + ' '; commandHints.style.display = 'none'; } }
-                else if (e.key === 'Escape') { commandHints.style.display = 'none'; }
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const hint = commandHints.querySelector('.hint-item');
+                if (hint) { chatInput.value = hint.dataset.cmd + ' '; updateHints(chatInput.value); }
             }
-            if (e.key === 'Enter') { sendChatBtn.click(); e.preventDefault(); }
         });
-        function updateSelectedHint() {
-            document.querySelectorAll('.hint-item').forEach((el, i) => el.classList.toggle('selected', i === hintIndex));
-        }
 
         sendChatBtn.addEventListener('click', () => {
             const msg = chatInput.value.trim(); if (!msg) return;
@@ -340,19 +377,21 @@
             else socket.emit('chat message', msg);
             chatInput.value = ''; commandHints.style.display = 'none';
         });
+        chatInput.addEventListener('keypress', e => { if (e.key==='Enter') sendChatBtn.click(); });
 
-        canvas.addEventListener('click', e => {
+        // Рисование
+        function tryPlacePixel(clientX, clientY) {
             if (!socket) return;
             const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            const x = (e.clientX - rect.left) * scaleX;
-            const y = (e.clientY - rect.top) * scaleY;
+            const scale = canvas.width / rect.width;
+            const x = (clientX - rect.left) * scale, y = (clientY - rect.top) * scale;
             socket.emit('draw pixel', { x, y, color: selectedColor }, res => {
                 if (res.ok) { statusMsg.textContent = ''; placeSound.play().catch(()=>{}); startCooldown(globalCooldown); }
                 else statusMsg.textContent = res.msg;
             });
-        });
+        }
+        canvas.addEventListener('click', e => tryPlacePixel(e.clientX, e.clientY));
+        canvas.addEventListener('touchstart', e => { e.preventDefault(); const touch = e.touches[0]; tryPlacePixel(touch.clientX, touch.clientY); }, {passive: false});
 
         function startCooldown(ms) {
             cooldownEnd = Date.now() + ms;
@@ -364,10 +403,12 @@
             update();
         }
 
+        // Скрытие чата
         toggleChatBtn.addEventListener('click', () => {
             chatHidden = !chatHidden;
             document.querySelector('.chat-messages').style.display = chatHidden ? 'none' : 'block';
             document.querySelector('.chat-input-container').style.display = chatHidden ? 'none' : 'flex';
+            commandHints.style.display = 'none';
             toggleChatBtn.textContent = chatHidden ? '📌 Показать чат' : '📌 Скрыть чат';
         });
 
