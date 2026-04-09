@@ -4,7 +4,12 @@ const socketIo = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = socketIo(server);
+const io = socketIo(server, {
+    cors: {
+        origin: "*", // Разрешаем подключения с любых адресов (для удобства)
+        methods: ["GET", "POST"]
+    }
+});
 
 app.use(express.static('public'));
 
@@ -72,6 +77,11 @@ io.on('connection', (socket) => {
             x: player.x,
             y: player.y
         });
+    });
+
+    // Обработка пинга для измерения задержки
+    socket.on('ping', () => {
+        socket.emit('pong');
     });
 
     socket.on('disconnect', () => {
