@@ -8,122 +8,107 @@ const io = socketIo(server, { cors: { origin: "*" } });
 
 app.use(express.static('public'));
 
-// Хранилище игроков и стена
-const players = new Map();
-const wall = {
-    holds: [
-        { id: 'hold1', x: 300, y: 500, type: 'normal' },
-        { id: 'hold2', x: 400, y: 300, type: 'good' },
-        { id: 'hold3', x: 200, y: 150, type: 'bad' },
-        { id: 'hold4', x: 600, y: 400, type: 'good' },
-        { id: 'hold5', x: 700, y: 200, type: 'normal' },
-        { id: 'hold6', x: 500, y: 550, type: 'bad' },
-    ]
-};
+// ---------- Конфигурация ----------
+const CANVAS_WIDTH = 800;
+const CANVAS_HEIGHT = 600;
+const PIXEL_SIZE = 10;
+const COOLDOWN_MS = 5000; // 5 секунд
+
+// Хранилища
+const accounts = new Map(); // nickname -> { password }
+const players = new Map();  // socket.id -> { nickname, lastDraw }
+
+// Холст (двумерный массив цветов)
+const canvas = Array(CANVAS_WIDTH / PIXEL_SIZE).fill().map(() =>
+    Array(CANVAS_HEIGHT / PIXEL_SIZE).fill('#ffffff')
+);
 
 io.on('connection', (socket) => {
-    console.log(`Новый игрок подключился: ${socket.id}`);
+    console.log(`+ ${socket.id}`);
 
-    // Обработка входа игрока
-    socket.on('join', (data, callback) => {
-        const nickname = data.nickname.trim().substring(0, 12) || 'Аноним';
-        const color = data.color || '#e74c3c';
-        
-        // Начальная позиция: левая рука на первом зацепе, правая на втором
-        const player = {
-            id: socket.id,
-            nickname: nickname,
-            color: color,
-            leftHand: { holdId: 'hold1' }, // Левая рука на hold1
-            rightHand: { holdId: 'hold2' }, // Правая рука на hold2
-            stamina: 100,
-            maxStamina: 100,
-            fall: false,
-        };
-        
-        players.set(socket.id, player);
-        
-        // Отправляем новому игроку информацию о стене и других игроках
-        callback({
-            success: true,
-            wall: wall,
-            players: Array.from(players.values())
-        });
-        
-        // Оповещаем остальных о новом игроке
-        socket.broadcast.emit('playerJoined', player);
+    // Регистрация
+    socket.on('register', (data, callback) => {
+        const { nickname, password } = data;
+        if (!nickname || !password) return callback({ ok: false, msg: 'Заполните поля' });
+        if (accounts.has(nickname)) return callback({ ok: false, msg: 'Аккаунт уже существует' });
+        accounts.set(nickname, { password });
+        callback({ ok: true });
     });
 
-    // Обработка движения руки
-    socket.on('grab', (data) => {
-        const player = players.get(socket.id);
-        if (!player || player.fall) return;
+    // Вход
+    socket.on('login', (data, callback) => {
+        const { nickname, password } = data;
+        const acc = accounts.get(nickname);
+        if (!acc || acc.password !== password) return callback({ ok: false, msg: 'Неверный логин или пароль' });
 
-        const targetHold = wall.holds.find(h => h.id === data.holdId);
-        if (!targetHold) return;
-
-        // Проверка, не занят ли зацеп другой рукой этого же игрока
-        const otherHandHold = (data.hand === 'left') ? player.rightHand?.holdId : player.leftHand?.holdId;
-        if (otherHandHold === targetHold.id) {
-            socket.emit('grabFailed', { reason: 'Зацеп уже занят другой рукой' });
-            return;
-        }
-
-        // Проверка дистанции до зацепа (упрощённая)
-        const handPos = (data.hand === 'left') ? player.leftHand : player.rightHand;
-        const currentHold = handPos ? wall.holds.find(h => h.id === handPos.holdId) : null;
-        if (currentHold) {
-            const dist = Math.hypot(targetHold.x - currentHold.x, targetHold.y - currentHold.y);
-            if (dist > 250) {
-                socket.emit('grabFailed', { reason: 'Слишком далеко' });
-                return;
+        // Удаляем старые подключения с таким же ником
+        for (const [id, p] of players.entries()) {
+            if (p.nickname === nickname) {
+                players.delete(id);
+                io.to(id).emit('force logout');
+                io.sockets.sockets.get(id)?.disconnect();
             }
         }
 
-        // Расход выносливости
-        const staminaCost = (targetHold.type === 'good') ? 10 : (targetHold.type === 'bad') ? 30 : 20;
-        if (player.stamina < staminaCost) {
-            socket.emit('grabFailed', { reason: 'Недостаточно выносливости' });
-            return;
-        }
-
-        // Перемещаем руку
-        if (data.hand === 'left') {
-            player.leftHand = { holdId: targetHold.id };
-        } else {
-            player.rightHand = { holdId: targetHold.id };
-        }
-        player.stamina -= staminaCost;
-
-        // Проверка на падение (обе руки в воздухе)
-        if (!player.leftHand && !player.rightHand) {
-            player.fall = true;
-            io.emit('playerFell', player.id);
-        }
-
-        // Отправляем обновление всем игрокам
-        io.emit('playerMoved', player);
+        players.set(socket.id, { nickname, lastDraw: 0 });
+        callback({ ok: true, canvas: canvas, online: getOnlineList() });
+        io.emit('online update', getOnlineList());
+        console.log(`>> ${nickname}`);
     });
 
-    // Восстановление выносливости (если не двигается)
-    socket.on('rest', () => {
+    // Автоматический вход по токену (уже из клиента)
+    socket.on('auto login', (nickname, callback) => {
+        if (!accounts.has(nickname)) return callback({ ok: false });
+        for (const [id, p] of players.entries()) {
+            if (p.nickname === nickname) {
+                players.delete(id);
+                io.to(id).emit('force logout');
+                io.sockets.sockets.get(id)?.disconnect();
+            }
+        }
+        players.set(socket.id, { nickname, lastDraw: 0 });
+        callback({ ok: true, canvas: canvas, online: getOnlineList() });
+        io.emit('online update', getOnlineList());
+        console.log(`>> ${nickname} (auto)`);
+    });
+
+    // Рисование пикселя
+    socket.on('draw pixel', (data, callback) => {
         const player = players.get(socket.id);
-        if (player && !player.fall) {
-            player.stamina = Math.min(player.maxStamina, player.stamina + 5);
-            io.emit('playerMoved', player);
+        if (!player) return callback({ ok: false, msg: 'Вы не в игре' });
+
+        const now = Date.now();
+        if (now - player.lastDraw < COOLDOWN_MS) {
+            const remain = Math.ceil((COOLDOWN_MS - (now - player.lastDraw)) / 1000);
+            return callback({ ok: false, msg: `Подождите ${remain} сек` });
         }
+
+        const { x, y, color } = data;
+        const gridX = Math.floor(x / PIXEL_SIZE);
+        const gridY = Math.floor(y / PIXEL_SIZE);
+        if (gridX < 0 || gridX >= canvas.length || gridY < 0 || gridY >= canvas[0].length)
+            return callback({ ok: false, msg: 'За пределами холста' });
+
+        canvas[gridX][gridY] = color;
+        player.lastDraw = now;
+
+        io.emit('pixel update', { x: gridX, y: gridY, color });
+        callback({ ok: true, cooldown: COOLDOWN_MS });
     });
 
-    // Отключение игрока
     socket.on('disconnect', () => {
-        console.log(`Игрок отключился: ${socket.id}`);
         const player = players.get(socket.id);
         if (player) {
             players.delete(socket.id);
-            io.emit('playerLeft', socket.id);
+            io.emit('online update', getOnlineList());
+            console.log(`-- ${player.nickname}`);
         }
     });
 });
 
+function getOnlineList() {
+    return Array.from(players.values()).map(p => p.nickname);
+}
+
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Сервер скалолазания запущен на порту ${PORT}`));
+server.listen(PORT, () => console.log(`Pixel Battle server on ${PORT}`));
