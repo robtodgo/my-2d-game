@@ -1,6 +1,8 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
@@ -8,25 +10,43 @@ const io = socketIo(server, { cors: { origin: "*" } });
 
 app.use(express.static('public'));
 
-// ---------- Конфигурация ----------
 const CANVAS_WIDTH = 800;
 const CANVAS_HEIGHT = 600;
 const PIXEL_SIZE = 10;
-const COOLDOWN_MS = 5000; // 5 секунд
+const COOLDOWN_MS = 5000;
+const SAVE_FILE = path.join(__dirname, 'canvas.json');
 
 // Хранилища
 const accounts = new Map(); // nickname -> { password }
 const players = new Map();  // socket.id -> { nickname, lastDraw }
 
-// Холст (двумерный массив цветов)
-const canvas = Array(CANVAS_WIDTH / PIXEL_SIZE).fill().map(() =>
-    Array(CANVAS_HEIGHT / PIXEL_SIZE).fill('#ffffff')
-);
+// Загрузка холста из файла или создание нового
+let canvas;
+if (fs.existsSync(SAVE_FILE)) {
+    try {
+        canvas = JSON.parse(fs.readFileSync(SAVE_FILE, 'utf8'));
+    } catch(e) { initEmptyCanvas(); }
+} else {
+    initEmptyCanvas();
+}
+
+function initEmptyCanvas() {
+    canvas = Array(CANVAS_WIDTH / PIXEL_SIZE).fill().map(() =>
+        Array(CANVAS_HEIGHT / PIXEL_SIZE).fill('#ffffff')
+    );
+}
+
+// Сохранение холста в файл
+function saveCanvas() {
+    fs.writeFileSync(SAVE_FILE, JSON.stringify(canvas), 'utf8');
+}
+
+// Периодическое сохранение (каждые 10 секунд)
+setInterval(saveCanvas, 10000);
 
 io.on('connection', (socket) => {
     console.log(`+ ${socket.id}`);
 
-    // Регистрация
     socket.on('register', (data, callback) => {
         const { nickname, password } = data;
         if (!nickname || !password) return callback({ ok: false, msg: 'Заполните поля' });
@@ -35,7 +55,6 @@ io.on('connection', (socket) => {
         callback({ ok: true });
     });
 
-    // Вход
     socket.on('login', (data, callback) => {
         const { nickname, password } = data;
         const acc = accounts.get(nickname);
@@ -56,7 +75,6 @@ io.on('connection', (socket) => {
         console.log(`>> ${nickname}`);
     });
 
-    // Автоматический вход по токену (уже из клиента)
     socket.on('auto login', (nickname, callback) => {
         if (!accounts.has(nickname)) return callback({ ok: false });
         for (const [id, p] of players.entries()) {
@@ -72,7 +90,6 @@ io.on('connection', (socket) => {
         console.log(`>> ${nickname} (auto)`);
     });
 
-    // Рисование пикселя
     socket.on('draw pixel', (data, callback) => {
         const player = players.get(socket.id);
         if (!player) return callback({ ok: false, msg: 'Вы не в игре' });
@@ -91,9 +108,16 @@ io.on('connection', (socket) => {
 
         canvas[gridX][gridY] = color;
         player.lastDraw = now;
+        saveCanvas(); // сохраняем сразу
 
         io.emit('pixel update', { x: gridX, y: gridY, color });
         callback({ ok: true, cooldown: COOLDOWN_MS });
+    });
+
+    socket.on('chat message', (msg) => {
+        const player = players.get(socket.id);
+        if (!player) return;
+        io.emit('chat message', { sender: player.nickname, text: msg });
     });
 
     socket.on('disconnect', () => {

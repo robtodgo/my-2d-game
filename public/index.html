@@ -2,93 +2,129 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Pixel Battle</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🎨 Pixel Battle</title>
     <style>
+        * { box-sizing: border-box; }
         body {
-            margin: 0; padding: 20px;
-            background: #1a1e2c; color: #e0e5f0;
+            margin: 0; padding: 0;
+            background: #0f1219; color: #e0e5f0;
             font-family: 'Segoe UI', sans-serif;
-            display: flex; justify-content: center;
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
         }
         #app {
-            max-width: 1000px; width: 100%;
+            width: 100%; max-width: 1400px; padding: 10px;
         }
+        /* Панель входа */
         #auth-panel {
-            background: #2a2f42; padding: 20px; border-radius: 16px;
-            margin-bottom: 20px; text-align: center;
+            background: #1e2432dd; backdrop-filter: blur(8px);
+            padding: 30px; border-radius: 24px; text-align: center;
+            max-width: 400px; margin: 0 auto; border: 1px solid #3e4a6b;
         }
         .tab-btn {
             background: none; border: none; color: #8a9bb5;
             font-size: 18px; padding: 10px 20px; cursor: pointer;
             border-bottom: 3px solid transparent;
         }
-        .tab-btn.active {
-            color: #6c9eff; border-bottom-color: #6c9eff;
-        }
+        .tab-btn.active { color: #6c9eff; border-bottom-color: #6c9eff; }
         .input-field {
-            padding: 10px; font-size: 16px; border-radius: 8px;
-            border: none; background: #1e2332; color: white;
-            margin: 10px 0; width: 250px;
+            padding: 12px; font-size: 16px; border-radius: 8px;
+            border: none; background: #2a3348; color: white;
+            margin: 10px 0; width: 100%;
         }
         .btn {
-            padding: 10px 24px; background: #6c9eff; border: none;
+            padding: 12px 24px; background: #6c9eff; border: none;
             border-radius: 8px; color: white; font-weight: bold;
             cursor: pointer; margin: 5px;
         }
-        #game-panel {
-            display: none;
+        #game-panel { display: none; }
+        /* Основной макет: три колонки */
+        .game-layout {
+            display: flex; gap: 15px; align-items: stretch;
+            height: calc(100vh - 20px); min-height: 600px;
         }
-        #top-bar {
-            display: flex; justify-content: space-between;
-            align-items: center; margin-bottom: 15px;
+        /* Левая панель: чат и онлайн */
+        .left-panel {
+            width: 250px; background: #1e2432dd; backdrop-filter: blur(8px);
+            border-radius: 16px; padding: 15px; display: flex; flex-direction: column;
+            border: 1px solid #3e4a6b;
         }
-        #online-box {
-            background: #2a2f42; padding: 8px 16px;
-            border-radius: 20px; font-size: 14px;
+        .online-box {
+            background: #2a3348; border-radius: 12px; padding: 10px;
+            margin-bottom: 15px;
         }
-        #cooldown-timer {
-            background: #2a2f42; padding: 8px 16px;
-            border-radius: 20px; color: #f1c40f;
+        .chat-messages {
+            flex: 1; overflow-y: auto; background: #151a24; border-radius: 12px;
+            padding: 10px; margin-bottom: 10px; font-size: 14px;
+        }
+        .chat-message { margin-bottom: 5px; word-break: break-word; }
+        .chat-input-container { display: flex; gap: 5px; }
+        .chat-input {
+            flex: 1; padding: 10px; border-radius: 20px; border: none;
+            background: #2a3348; color: white;
+        }
+        /* Центр: холст */
+        .center-panel {
+            flex: 1; display: flex; flex-direction: column; align-items: center;
+        }
+        .canvas-container {
+            background: #1e2432; padding: 10px; border-radius: 20px;
+            box-shadow: 0 0 20px #00000050; border: 1px solid #3e4a6b;
         }
         canvas {
-            display: block; background: #fff;
-            border-radius: 12px; box-shadow: 0 0 20px #00000050;
+            display: block; background: white; border-radius: 12px;
             width: 100%; height: auto; cursor: crosshair;
+            touch-action: none; /* для мобильных */
         }
-        #color-picker-container {
-            margin: 15px 0; display: flex; align-items: center;
-            gap: 15px;
+        .cooldown-bar {
+            margin-top: 10px; width: 100%; height: 8px; background: #2a3348;
+            border-radius: 4px; overflow: hidden;
         }
-        #status-msg {
-            color: #ff7b7b; margin-left: 10px;
+        .cooldown-fill { height: 100%; width: 100%; background: #6c9eff; transition: width 0.1s; }
+        /* Правая панель: палитра */
+        .right-panel {
+            width: 200px; background: #1e2432dd; backdrop-filter: blur(8px);
+            border-radius: 16px; padding: 15px; border: 1px solid #3e4a6b;
+            overflow-y: auto;
         }
-        #logout-btn {
-            background: #4a5a7a;
+        .color-palette {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+        }
+        .color-swatch {
+            aspect-ratio: 1; border-radius: 8px; border: 2px solid #4a5a7a;
+            cursor: pointer; transition: transform 0.1s;
+        }
+        .color-swatch:hover { transform: scale(1.1); border-color: white; }
+        .color-swatch.selected { border: 3px solid white; box-shadow: 0 0 10px #6c9eff; }
+        #logout-btn { background: #4a5a7a; width: 100%; margin-top: 10px; }
+        #status-msg { color: #ff7b7b; font-size: 13px; margin-top: 5px; }
+
+        /* Адаптив для мобильных */
+        @media (max-width: 800px) {
+            .game-layout { flex-direction: column; height: auto; }
+            .left-panel, .right-panel { width: 100%; }
+            .right-panel { margin-top: 10px; }
+            .color-palette { grid-template-columns: repeat(8, 1fr); }
         }
     </style>
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
 <div id="app">
-    <!-- Панель аутентификации -->
+    <!-- Аутентификация -->
     <div id="auth-panel">
         <div>
             <button class="tab-btn active" data-tab="login">Вход</button>
             <button class="tab-btn" data-tab="register">Регистрация</button>
         </div>
         <div id="login-form">
-            <input type="text" id="login-nickname" class="input-field" placeholder="Логин" maxlength="15" autocomplete="off">
-            <br>
-            <input type="password" id="login-password" class="input-field" placeholder="Пароль" autocomplete="off">
-            <br>
+            <input type="text" id="login-nickname" class="input-field" placeholder="Логин" maxlength="15">
+            <input type="password" id="login-password" class="input-field" placeholder="Пароль">
             <button class="btn" id="login-btn">Войти</button>
         </div>
         <div id="register-form" style="display:none;">
-            <input type="text" id="reg-nickname" class="input-field" placeholder="Логин" maxlength="15" autocomplete="off">
-            <br>
-            <input type="password" id="reg-password" class="input-field" placeholder="Пароль" autocomplete="off">
-            <br>
+            <input type="text" id="reg-nickname" class="input-field" placeholder="Логин" maxlength="15">
+            <input type="password" id="reg-password" class="input-field" placeholder="Пароль">
             <button class="btn" id="register-btn">Зарегистрироваться</button>
         </div>
         <div id="auth-error" style="color:#ff7b7b; margin-top:10px;"></div>
@@ -96,35 +132,56 @@
 
     <!-- Игровая панель -->
     <div id="game-panel">
-        <div id="top-bar">
-            <div id="online-box">👥 Онлайн: <span id="online-count">0</span></div>
-            <div id="cooldown-timer">⏳ Готово</div>
-            <button class="btn" id="logout-btn">🚪 Выйти</button>
+        <div class="game-layout">
+            <!-- Левая колонка: чат и онлайн -->
+            <div class="left-panel">
+                <div class="online-box">
+                    👥 Онлайн: <span id="online-count">0</span>
+                    <button class="btn" id="logout-btn" style="padding:6px; margin-top:8px;">🚪 Выйти</button>
+                </div>
+                <div class="chat-messages" id="chat-messages"></div>
+                <div class="chat-input-container">
+                    <input type="text" class="chat-input" id="chat-input" placeholder="Сообщение..." maxlength="100" autocomplete="off">
+                    <button class="btn" id="send-chat-btn" style="padding:8px 12px;">➤</button>
+                </div>
+            </div>
+
+            <!-- Центр: холст -->
+            <div class="center-panel">
+                <div class="canvas-container">
+                    <canvas id="canvas" width="800" height="600"></canvas>
+                </div>
+                <div class="cooldown-bar">
+                    <div class="cooldown-fill" id="cooldown-fill"></div>
+                </div>
+                <div id="status-msg"></div>
+            </div>
+
+            <!-- Правая колонка: палитра -->
+            <div class="right-panel">
+                <h4 style="margin:0 0 10px 0; text-align:center;">🎨 Цвета</h4>
+                <div class="color-palette" id="color-palette"></div>
+                <div style="margin-top:10px; text-align:center;">
+                    <span>Выбран: <span id="selected-color-preview" style="display:inline-block; width:20px; height:20px; border-radius:4px; vertical-align:middle; background:#ff0000;"></span></span>
+                </div>
+                <p style="font-size:12px; color:#8a9bb5; margin-top:15px;">Клик по холсту — поставить пиксель (5 сек кд)</p>
+            </div>
         </div>
-        <canvas id="canvas" width="800" height="600"></canvas>
-        <div id="color-picker-container">
-            <label for="pixel-color">Цвет:</label>
-            <input type="color" id="pixel-color" value="#ff0000">
-            <span id="status-msg"></span>
-        </div>
-        <p style="font-size:13px; color:#8a9bb5;">Кликните по холсту, чтобы поставить пиксель (можно раз в 5 секунд)</p>
     </div>
 </div>
 
 <script>
     (function(){
+        // ---------- DOM ----------
         const authPanel = document.getElementById('auth-panel');
         const gamePanel = document.getElementById('game-panel');
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
         
-        // Вкладки
         const tabBtns = document.querySelectorAll('.tab-btn');
         const loginForm = document.getElementById('login-form');
         const registerForm = document.getElementById('register-form');
         const authError = document.getElementById('auth-error');
-        
-        // Поля
         const loginNick = document.getElementById('login-nickname');
         const loginPass = document.getElementById('login-password');
         const regNick = document.getElementById('reg-nickname');
@@ -134,78 +191,89 @@
         const logoutBtn = document.getElementById('logout-btn');
         
         const onlineSpan = document.getElementById('online-count');
-        const cooldownDiv = document.getElementById('cooldown-timer');
-        const pixelColor = document.getElementById('pixel-color');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendChatBtn = document.getElementById('send-chat-btn');
+        const cooldownFill = document.getElementById('cooldown-fill');
         const statusMsg = document.getElementById('status-msg');
+        const colorPalette = document.getElementById('color-palette');
+        const selectedColorPreview = document.getElementById('selected-color-preview');
 
+        // ---------- Глобальные переменные ----------
         let socket;
         let currentNick = null;
-        let canvasData = []; // будет заполнена с сервера
+        let canvasData = [];
         const PIXEL_SIZE = 10;
         let cooldownEnd = 0;
+        let selectedColor = '#ff0000';
 
-        // Проверка сохранённой сессии
+        // Палитра из 32 цветов
+        const paletteColors = [
+            '#ffffff','#c0c0c0','#808080','#000000',
+            '#ff0000','#800000','#ffff00','#808000',
+            '#00ff00','#008000','#00ffff','#008080',
+            '#0000ff','#000080','#ff00ff','#800080',
+            '#ffa500','#ffc0cb','#a52a2a','#f5f5dc',
+            '#e6e6fa','#d3d3d3','#98fb98','#ffb6c1',
+            '#ffd700','#cd853f','#4b0082','#2e8b57',
+            '#dc143c','#1e90ff','#32cd32','#ff69b4'
+        ];
+
+        // Создание палитры
+        paletteColors.forEach(color => {
+            const swatch = document.createElement('div');
+            swatch.className = 'color-swatch';
+            swatch.style.backgroundColor = color;
+            swatch.addEventListener('click', () => {
+                document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+                swatch.classList.add('selected');
+                selectedColor = color;
+                selectedColorPreview.style.backgroundColor = color;
+            });
+            if (color === selectedColor) { swatch.classList.add('selected'); selectedColorPreview.style.backgroundColor = color; }
+            colorPalette.appendChild(swatch);
+        });
+
+        // ---------- Сессия ----------
         const savedNick = localStorage.getItem('pixelbattle_nick');
-        if (savedNick) {
-            // Попробуем автоматически войти
-            attemptAutoLogin(savedNick);
-        }
+        if (savedNick) attemptAutoLogin(savedNick);
 
         // Вкладки
         tabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 tabBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                const tab = btn.dataset.tab;
-                loginForm.style.display = tab === 'login' ? 'block' : 'none';
-                registerForm.style.display = tab === 'register' ? 'block' : 'none';
+                loginForm.style.display = btn.dataset.tab === 'login' ? 'block' : 'none';
+                registerForm.style.display = btn.dataset.tab === 'register' ? 'block' : 'none';
                 authError.textContent = '';
             });
         });
 
-        // Регистрация
         registerBtn.addEventListener('click', () => {
-            const nick = regNick.value.trim();
-            const pass = regPass.value;
-            if (!nick || !pass) { authError.textContent = 'Заполните все поля'; return; }
+            const nick = regNick.value.trim(), pass = regPass.value;
+            if (!nick || !pass) { authError.textContent = 'Заполните поля'; return; }
             if (!socket) socket = io();
-            socket.emit('register', { nickname: nick, password: pass }, (res) => {
-                if (res.ok) {
-                    authError.textContent = '';
-                    alert('Регистрация успешна! Теперь войдите.');
-                    document.querySelector('[data-tab="login"]').click();
-                    loginNick.value = nick;
-                } else {
-                    authError.textContent = res.msg;
-                }
+            socket.emit('register', { nickname: nick, password: pass }, res => {
+                if (res.ok) { alert('Регистрация успешна!'); document.querySelector('[data-tab="login"]').click(); loginNick.value = nick; }
+                else authError.textContent = res.msg;
             });
         });
 
-        // Вход
         loginBtn.addEventListener('click', () => {
-            const nick = loginNick.value.trim();
-            const pass = loginPass.value;
-            if (!nick || !pass) { authError.textContent = 'Заполните все поля'; return; }
+            const nick = loginNick.value.trim(), pass = loginPass.value;
+            if (!nick || !pass) { authError.textContent = 'Заполните поля'; return; }
             if (!socket) socket = io();
-            socket.emit('login', { nickname: nick, password: pass }, (res) => {
-                if (res.ok) {
-                    authError.textContent = '';
-                    onLoginSuccess(nick, res.canvas);
-                    localStorage.setItem('pixelbattle_nick', nick);
-                } else {
-                    authError.textContent = res.msg;
-                }
+            socket.emit('login', { nickname: nick, password: pass }, res => {
+                if (res.ok) { onLoginSuccess(nick, res.canvas); localStorage.setItem('pixelbattle_nick', nick); }
+                else authError.textContent = res.msg;
             });
         });
 
         function attemptAutoLogin(nick) {
             if (!socket) socket = io();
-            socket.emit('auto login', nick, (res) => {
-                if (res.ok) {
-                    onLoginSuccess(nick, res.canvas);
-                } else {
-                    localStorage.removeItem('pixelbattle_nick');
-                }
+            socket.emit('auto login', nick, res => {
+                if (res.ok) onLoginSuccess(nick, res.canvas);
+                else localStorage.removeItem('pixelbattle_nick');
             });
         }
 
@@ -216,87 +284,72 @@
             gamePanel.style.display = 'block';
             renderCanvas();
             
-            socket.on('online update', (list) => {
-                onlineSpan.textContent = list.length;
-            });
-            socket.on('pixel update', (data) => {
-                canvasData[data.x][data.y] = data.color;
-                drawPixel(data.x, data.y, data.color);
-            });
-            socket.on('force logout', () => {
-                alert('Вас отключили, так как вы зашли с другого устройства.');
-                logout();
-            });
+            socket.on('online update', list => onlineSpan.textContent = list.length);
+            socket.on('pixel update', data => { canvasData[data.x][data.y] = data.color; drawPixel(data.x, data.y, data.color); });
+            socket.on('force logout', () => { alert('Вас отключили (вход с другого устройства)'); logout(); });
+            socket.on('chat message', data => addChatMessage(data.sender, data.text));
         }
 
         function renderCanvas() {
-            for (let gx = 0; gx < canvasData.length; gx++) {
-                for (let gy = 0; gy < canvasData[0].length; gy++) {
+            for (let gx = 0; gx < canvasData.length; gx++)
+                for (let gy = 0; gy < canvasData[0].length; gy++)
                     drawPixel(gx, gy, canvasData[gx][gy]);
-                }
-            }
         }
-
         function drawPixel(gx, gy, color) {
             ctx.fillStyle = color;
             ctx.fillRect(gx * PIXEL_SIZE, gy * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
         }
 
+        // Чат
+        function addChatMessage(sender, text) {
+            const div = document.createElement('div'); div.className = 'chat-message';
+            div.innerHTML = `<b>${sender}:</b> ${text}`;
+            chatMessages.appendChild(div);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        sendChatBtn.addEventListener('click', sendChat);
+        chatInput.addEventListener('keypress', e => { if (e.key === 'Enter') sendChat(); });
+        function sendChat() {
+            const msg = chatInput.value.trim(); if (!msg || !socket) return;
+            socket.emit('chat message', msg); chatInput.value = '';
+        }
+
         // Рисование
-        canvas.addEventListener('click', (e) => {
+        canvas.addEventListener('click', e => {
             if (!socket || !currentNick) return;
             const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
+            const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
             const canvasX = (e.clientX - rect.left) * scaleX;
             const canvasY = (e.clientY - rect.top) * scaleY;
-            
-            socket.emit('draw pixel', { x: canvasX, y: canvasY, color: pixelColor.value }, (res) => {
-                if (res.ok) {
-                    statusMsg.textContent = '';
-                    startCooldown(res.cooldown);
-                } else {
-                    statusMsg.textContent = res.msg;
-                }
+            socket.emit('draw pixel', { x: canvasX, y: canvasY, color: selectedColor }, res => {
+                if (res.ok) { statusMsg.textContent = ''; startCooldown(res.cooldown); }
+                else statusMsg.textContent = res.msg;
             });
         });
+        // Мобильные тапы
+        canvas.addEventListener('touchstart', e => { e.preventDefault(); const touch = e.touches[0]; const fakeEvent = { clientX: touch.clientX, clientY: touch.clientY }; canvas.dispatchEvent(new MouseEvent('click', fakeEvent)); }, {passive: false});
 
         function startCooldown(ms) {
             cooldownEnd = Date.now() + ms;
-            updateCooldownDisplay();
+            updateCooldownBar();
             const interval = setInterval(() => {
-                if (Date.now() >= cooldownEnd) {
-                    cooldownDiv.textContent = '⏳ Готово';
-                    clearInterval(interval);
-                } else {
-                    updateCooldownDisplay();
-                }
-            }, 200);
+                if (Date.now() >= cooldownEnd) { cooldownFill.style.width = '100%'; clearInterval(interval); }
+                else updateCooldownBar();
+            }, 100);
         }
-
-        function updateCooldownDisplay() {
+        function updateCooldownBar() {
             const remain = Math.max(0, cooldownEnd - Date.now());
-            const sec = (remain / 1000).toFixed(1);
-            cooldownDiv.textContent = `⏳ ${sec} сек`;
+            const percent = (remain / COOLDOWN_MS) * 100;
+            cooldownFill.style.width = (100 - percent) + '%';
         }
 
-        // Выход
-        logoutBtn.addEventListener('click', logout);
         function logout() {
             localStorage.removeItem('pixelbattle_nick');
-            if (socket) socket.disconnect();
-            socket = null;
-            currentNick = null;
-            authPanel.style.display = 'block';
-            gamePanel.style.display = 'none';
-            loginNick.value = '';
-            loginPass.value = '';
-            authError.textContent = '';
+            if (socket) socket.disconnect(); socket = null;
+            currentNick = null; authPanel.style.display = 'block'; gamePanel.style.display = 'none';
         }
-
-        window.addEventListener('beforeunload', () => {
-            if (socket) socket.disconnect();
-        });
+        logoutBtn.addEventListener('click', logout);
+        window.addEventListener('beforeunload', () => socket?.disconnect());
     })();
 </script>
 </body>
