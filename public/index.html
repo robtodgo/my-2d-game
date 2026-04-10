@@ -42,7 +42,7 @@
             display: flex; flex-direction: column; align-items: center;
         }
         .right-panel {
-            width: 200px; background: #1e2432dd; backdrop-filter: blur(8px);
+            width: 220px; background: #1e2432dd; backdrop-filter: blur(8px);
             border-radius: 16px; padding: 15px; border: 1px solid #3e4a6b;
         }
         .canvas-container {
@@ -50,10 +50,20 @@
             box-shadow: 0 0 20px #00000050; border: 1px solid #3e4a6b;
             position: relative;
         }
-        canvas { display: block; background: white; border-radius: 12px; width: 100%; height: auto; image-rendering: pixelated; cursor: none; }
+        canvas { 
+            display: block; 
+            background: white; 
+            border-radius: 12px; 
+            width: 640px; 
+            height: 640px; 
+            image-rendering: crisp-edges; /* пикселизация */
+            image-rendering: pixelated;
+            cursor: none; 
+        }
         #preview-canvas {
             position: absolute; top: 10px; left: 10px;
             pointer-events: none; image-rendering: pixelated;
+            width: 640px; height: 640px;
         }
         .cooldown-bar {
             margin-top: 10px; width: 100%; height: 8px; background: #2a3348;
@@ -89,9 +99,13 @@
             margin-top: 10px; border-top: 1px solid #4a5a7a; padding-top: 10px;
             display: none;
         }
+        #tools-container {
+            display: none; /* по умолчанию скрыты, показываются только админу */
+        }
         @media (max-width: 800px) {
             .game-layout { flex-direction: column; }
             .left-panel, .right-panel { width: 100%; }
+            canvas, #preview-canvas { width: 100%; height: auto; }
         }
     </style>
     <script src="/socket.io/socket.io.js"></script>
@@ -133,24 +147,29 @@
             </div>
 
             <div class="right-panel">
-                <h4>🎨 Инструменты</h4>
-                <div>
-                    <button class="tool-btn active" data-tool="brush">🖌️ Кисть</button>
-                    <button class="tool-btn" data-tool="fill">🪣 Заливка</button>
-                    <button class="tool-btn" data-tool="picker">💉 Пипетка</button>
-                    <button class="tool-btn" data-tool="eraser">🧽 Ластик</button>
-                </div>
-                <div style="margin:10px 0;">
-                    <label>Размер кисти:</label>
-                    <select id="brush-size">
-                        <option value="1">1x1</option>
-                        <option value="2">2x2</option>
-                        <option value="3">3x3</option>
-                    </select>
-                </div>
                 <h4>🎨 Палитра (16)</h4>
                 <div class="color-palette" id="color-palette"></div>
                 <div>Выбран: <span id="selected-color-preview" style="display:inline-block; width:20px; height:20px; border-radius:4px; background:#ff0000;"></span></div>
+                
+                <!-- Инструменты только для админа -->
+                <div id="tools-container">
+                    <h4>🛠️ Инструменты</h4>
+                    <div>
+                        <button class="tool-btn active" data-tool="brush">🖌️ Кисть</button>
+                        <button class="tool-btn" data-tool="fill">🪣 Заливка</button>
+                        <button class="tool-btn" data-tool="picker">💉 Пипетка</button>
+                        <button class="tool-btn" data-tool="eraser">🧽 Ластик</button>
+                    </div>
+                    <div style="margin:10px 0;">
+                        <label>Размер кисти:</label>
+                        <select id="brush-size">
+                            <option value="1">1x1</option>
+                            <option value="2">2x2</option>
+                            <option value="3">3x3</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div id="admin-panel">
                     <hr>
                     <h4>👑 Админ</h4>
@@ -187,6 +206,7 @@
         const statusMsg = document.getElementById('status-msg');
         const adminIndicator = document.getElementById('admin-indicator');
         const adminPanel = document.getElementById('admin-panel');
+        const toolsContainer = document.getElementById('tools-container');
         const uploadBtn = document.getElementById('upload-btn');
         const imageUpload = document.getElementById('image-upload');
         const clearCanvasBtn = document.getElementById('clear-canvas');
@@ -226,7 +246,7 @@
             paletteDiv.appendChild(swatch);
         });
 
-        // Инструменты
+        // Инструменты (только для админа)
         document.querySelectorAll('[data-tool]').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
@@ -240,11 +260,15 @@
         let mouseGridX = -1, mouseGridY = -1;
         function updatePreview(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
-            const scale = canvas.width / rect.width;
-            const x = Math.floor((clientX - rect.left) * scale);
-            const y = Math.floor((clientY - rect.top) * scale);
-            if (x >= 0 && x < 80 && y >= 0 && y < 80) {
-                mouseGridX = x; mouseGridY = y;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const canvasX = (clientX - rect.left) * scaleX;
+            const canvasY = (clientY - rect.top) * scaleY;
+            const gridX = Math.floor(canvasX);
+            const gridY = Math.floor(canvasY);
+            if (gridX >= 0 && gridX < 80 && gridY >= 0 && gridY < 80) {
+                mouseGridX = gridX;
+                mouseGridY = gridY;
             } else {
                 mouseGridX = mouseGridY = -1;
             }
@@ -262,14 +286,21 @@
         }
         canvas.addEventListener('mousemove', e => updatePreview(e.clientX, e.clientY));
         canvas.addEventListener('mouseleave', () => { mouseGridX = mouseGridY = -1; drawPreview(); });
-        canvas.addEventListener('touchmove', e => { e.preventDefault(); const touch = e.touches[0]; updatePreview(touch.clientX, touch.clientY); });
-        canvas.addEventListener('touchstart', e => { e.preventDefault(); const touch = e.touches[0]; updatePreview(touch.clientX, touch.clientY); });
+        canvas.addEventListener('touchmove', e => { 
+            e.preventDefault(); 
+            const touch = e.touches[0]; 
+            updatePreview(touch.clientX, touch.clientY); 
+        });
+        canvas.addEventListener('touchstart', e => { 
+            e.preventDefault(); 
+            const touch = e.touches[0]; 
+            updatePreview(touch.clientX, touch.clientY); 
+        });
         canvas.addEventListener('touchend', () => { mouseGridX = mouseGridY = -1; drawPreview(); });
 
         // Сеть
         function connect() {
             socket = io();
-            socket.on('connect', () => {});
             socket.on('online update', list => onlineSpan.textContent = list.length);
             socket.on('chat message', data => addChatMessage(data.sender, data.text));
             socket.on('pixel update', data => {
@@ -290,6 +321,7 @@
                 isAdmin = status;
                 adminIndicator.textContent = status ? '👑' : '';
                 adminPanel.style.display = status ? 'block' : 'none';
+                toolsContainer.style.display = status ? 'block' : 'none';
             });
             socket.on('cooldown update', cd => globalCooldown = cd);
             socket.on('force logout', () => {
@@ -355,33 +387,43 @@
         // Рисование
         function handleDraw(x, y) {
             if (!socket || !currentNick) return;
-            if (currentTool === 'brush' || currentTool === 'eraser') {
-                const color = currentTool === 'eraser' ? '#ffffff' : selectedColor;
-                const size = brushSize;
-                for (let dx = 0; dx < size; dx++) {
-                    for (let dy = 0; dy < size; dy++) {
-                        const nx = x + dx, ny = y + dy;
-                        if (nx < 80 && ny < 80) {
-                            socket.emit('draw pixel', { x: nx, y: ny, color }, (res) => {
-                                if (!res.ok) statusMsg.textContent = res.msg;
-                                else statusMsg.textContent = '';
-                            });
+            
+            if (isAdmin) {
+                // Админские инструменты
+                if (currentTool === 'brush' || currentTool === 'eraser') {
+                    const color = currentTool === 'eraser' ? '#ffffff' : selectedColor;
+                    const size = brushSize;
+                    for (let dx = 0; dx < size; dx++) {
+                        for (let dy = 0; dy < size; dy++) {
+                            const nx = x + dx, ny = y + dy;
+                            if (nx < 80 && ny < 80) {
+                                socket.emit('draw pixel', { x: nx, y: ny, color }, (res) => {
+                                    if (!res.ok) statusMsg.textContent = res.msg;
+                                    else statusMsg.textContent = '';
+                                });
+                            }
                         }
                     }
+                } else if (currentTool === 'fill') {
+                    const targetColor = canvasData[x][y];
+                    if (targetColor === selectedColor) return;
+                    const pixels = floodFill(x, y, targetColor);
+                    socket.emit('fill', { pixels, color: selectedColor }, (res) => {
+                        if (!res.ok) statusMsg.textContent = res.msg;
+                        else statusMsg.textContent = '';
+                    });
+                } else if (currentTool === 'picker') {
+                    selectedColor = canvasData[x][y];
+                    colorPreview.style.backgroundColor = selectedColor;
+                    document.querySelectorAll('.color-swatch').forEach(s => {
+                        s.classList.toggle('selected', s.style.backgroundColor === selectedColor);
+                    });
                 }
-            } else if (currentTool === 'fill') {
-                const targetColor = canvasData[x][y];
-                if (targetColor === selectedColor) return;
-                const pixels = floodFill(x, y, targetColor);
-                socket.emit('fill', { pixels, color: selectedColor }, (res) => {
+            } else {
+                // Обычный игрок — только кисть 1x1
+                socket.emit('draw pixel', { x, y, color: selectedColor }, (res) => {
                     if (!res.ok) statusMsg.textContent = res.msg;
                     else statusMsg.textContent = '';
-                });
-            } else if (currentTool === 'picker') {
-                selectedColor = canvasData[x][y];
-                colorPreview.style.backgroundColor = selectedColor;
-                document.querySelectorAll('.color-swatch').forEach(s => {
-                    s.classList.toggle('selected', s.style.backgroundColor === selectedColor);
                 });
             }
         }
@@ -407,18 +449,20 @@
 
         canvas.addEventListener('mousedown', e => {
             const rect = canvas.getBoundingClientRect();
-            const scale = canvas.width / rect.width;
-            const x = Math.floor((e.clientX - rect.left) * scale);
-            const y = Math.floor((e.clientY - rect.top) * scale);
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = Math.floor((e.clientX - rect.left) * scaleX);
+            const y = Math.floor((e.clientY - rect.top) * scaleY);
             handleDraw(x, y);
         });
         canvas.addEventListener('touchstart', e => {
             e.preventDefault();
             const rect = canvas.getBoundingClientRect();
             const touch = e.touches[0];
-            const scale = canvas.width / rect.width;
-            const x = Math.floor((touch.clientX - rect.left) * scale);
-            const y = Math.floor((touch.clientY - rect.top) * scale);
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = Math.floor((touch.clientX - rect.left) * scaleX);
+            const y = Math.floor((touch.clientY - rect.top) * scaleY);
             handleDraw(x, y);
         }, {passive: false});
 
