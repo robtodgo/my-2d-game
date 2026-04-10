@@ -228,6 +228,7 @@
         const publicCommands = ['/help'];
         const adminCommands = ['/cooldown', '/ban', '/unban', '/clear', '/kick', '/op'];
 
+        // Палитра
         const colors = ['#ffffff','#c0c0c0','#808080','#000000','#ff0000','#800000','#ffff00','#808000','#00ff00','#008000','#00ffff','#008080','#0000ff','#000080','#ff00ff','#800080','#ffa500','#ffc0cb','#a52a2a','#f5f5dc','#e6e6fa','#d3d3d3','#98fb98','#ffb6c1','#ffd700','#cd853f','#4b0082','#2e8b57','#dc143c','#1e90ff','#32cd32','#ff69b4'];
         colors.forEach(c => {
             const s = document.createElement('div'); s.className = 'color-swatch'; s.style.backgroundColor = c;
@@ -238,6 +239,7 @@
 
         const placeSound = new Audio('data:audio/wav;base64,UklGRlwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVoAAACAgICAf39/f3//AAAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//w==');
 
+        // Предпросмотр
         let mouseGridX = -1, mouseGridY = -1;
         function updatePreview(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
@@ -270,6 +272,7 @@
         canvas.addEventListener('touchstart', (e) => { e.preventDefault(); const touch = e.touches[0]; updatePreview(touch.clientX, touch.clientY); });
         canvas.addEventListener('touchend', () => { mouseGridX = mouseGridY = -1; drawPreview(); });
 
+        // Тема
         function setTheme(dark) {
             darkTheme = dark;
             document.body.classList.toggle('light-theme', !dark);
@@ -279,6 +282,7 @@
         if (savedTheme) setTheme(savedTheme === 'dark');
         settingsBtn.addEventListener('click', () => setTheme(!darkTheme));
 
+        // Автологин
         const savedNick = localStorage.getItem('pixelbattle_nick');
         if (savedNick) attemptAutoLogin(savedNick);
 
@@ -314,28 +318,54 @@
         }
 
         function onLoginSuccess(nick, servCanvas, cd) {
-            currentNick = nick; canvasData = servCanvas; globalCooldown = cd;
-            authPanel.style.display = 'none'; gamePanel.style.display = 'block';
-            renderCanvas();
+            currentNick = nick;
+            canvasData = servCanvas;
+            globalCooldown = cd;
+            authPanel.style.display = 'none';
+            gamePanel.style.display = 'block';
+            
+            // Принудительно отрисовываем холст
+            renderFullCanvas();
+            
             socket.on('online update', list => onlineSpan.textContent = list.length);
-            socket.on('pixel update', data => { canvasData[data.x][data.y] = data.color; drawPixel(data.x, data.y, data.color); });
+            socket.on('pixel update', data => {
+                if (!canvasData[data.x] || !canvasData[data.x][data.y]) return;
+                canvasData[data.x][data.y] = data.color;
+                drawPixel(data.x, data.y, data.color);
+            });
             socket.on('force logout', () => { alert('Вас отключили'); logout(); });
             socket.on('banned', () => { alert('Вы забанены'); logout(); });
             socket.on('chat message', data => addChatMessage(data.sender, data.text));
             socket.on('admin status', status => { isAdmin = status; adminIndicator.textContent = status ? '👑' : ''; });
             socket.on('cooldown update', cd => globalCooldown = cd);
-            socket.on('canvas reset', newCanvas => { canvasData = newCanvas; renderCanvas(); });
+            socket.on('canvas reset', newCanvas => { canvasData = newCanvas; renderFullCanvas(); });
         }
 
-        function renderCanvas() { for (let x=0; x<canvasData.length; x++) for (let y=0; y<canvasData[0].length; y++) drawPixel(x, y, canvasData[x][y]); }
-        function drawPixel(gx, gy, color) { ctx.fillStyle = color; ctx.fillRect(gx*PIXEL_SIZE, gy*PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE); }
+        function renderFullCanvas() {
+            if (!canvasData || canvasData.length === 0) {
+                console.warn('canvasData пуст, подождите...');
+                return;
+            }
+            for (let gx = 0; gx < canvasData.length; gx++) {
+                for (let gy = 0; gy < canvasData[gx].length; gy++) {
+                    drawPixel(gx, gy, canvasData[gx][gy]);
+                }
+            }
+        }
+
+        function drawPixel(gx, gy, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(gx * PIXEL_SIZE, gy * PIXEL_SIZE, PIXEL_SIZE, PIXEL_SIZE);
+        }
 
         function addChatMessage(sender, text) {
             const div = document.createElement('div'); div.className = 'chat-message';
-            div.innerHTML = `<b>${sender}:</b> ${text}`; chatMessages.appendChild(div);
+            div.innerHTML = `<b>${sender}:</b> ${text}`;
+            chatMessages.appendChild(div);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
+        // Подсказки команд
         function updateHints(input) {
             if (!input.startsWith('/')) { commandHints.style.display = 'none'; return; }
             let available = publicCommands;
@@ -369,18 +399,30 @@
         });
         chatInput.addEventListener('keypress', e => { if (e.key==='Enter') sendChatBtn.click(); });
 
+        // Рисование пикселя
         function tryPlacePixel(clientX, clientY) {
             if (!socket) return;
             const rect = canvas.getBoundingClientRect();
-            const scale = canvas.width / rect.width;
-            const x = (clientX - rect.left) * scale, y = (clientY - rect.top) * scale;
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (clientX - rect.left) * scaleX;
+            const y = (clientY - rect.top) * scaleY;
             socket.emit('draw pixel', { x, y, color: selectedColor }, res => {
-                if (res.ok) { statusMsg.textContent = ''; placeSound.play().catch(()=>{}); startCooldown(globalCooldown); }
-                else statusMsg.textContent = res.msg;
+                if (res.ok) {
+                    statusMsg.textContent = '';
+                    placeSound.play().catch(()=>{});
+                    startCooldown(globalCooldown);
+                } else {
+                    statusMsg.textContent = res.msg;
+                }
             });
         }
         canvas.addEventListener('click', e => tryPlacePixel(e.clientX, e.clientY));
-        canvas.addEventListener('touchstart', e => { e.preventDefault(); const touch = e.touches[0]; tryPlacePixel(touch.clientX, touch.clientY); }, {passive: false});
+        canvas.addEventListener('touchstart', e => {
+            e.preventDefault();
+            const touch = e.touches[0];
+            tryPlacePixel(touch.clientX, touch.clientY);
+        }, {passive: false});
 
         function startCooldown(ms) {
             cooldownEnd = Date.now() + ms;
@@ -403,8 +445,11 @@
         logoutBtn.addEventListener('click', logout);
         function logout() {
             localStorage.removeItem('pixelbattle_nick');
-            if (socket) socket.disconnect(); socket = null;
-            currentNick = null; authPanel.style.display = 'block'; gamePanel.style.display = 'none';
+            if (socket) socket.disconnect();
+            socket = null;
+            currentNick = null;
+            authPanel.style.display = 'block';
+            gamePanel.style.display = 'none';
         }
         window.addEventListener('beforeunload', () => socket?.disconnect());
     })();
