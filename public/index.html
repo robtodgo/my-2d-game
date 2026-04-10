@@ -2,127 +2,379 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>🎨 Pixel Battle</title>
     <style>
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
-            margin: 0; padding: 0;
-            background: #0f1219; color: #e0e5f0;
-            font-family: 'Segoe UI', sans-serif;
-            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            background: #0b0e14;
+            color: #e0e5f0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: background 0.2s, color 0.2s;
         }
         body.light-theme {
-            background: #f0f2f5; color: #1a1e2c;
+            background: #f5f7fa;
+            color: #1a1e2c;
         }
-        #app { width: 100%; max-width: 1400px; padding: 10px; }
+        #app {
+            width: 100%;
+            max-width: 1400px;
+            padding: 12px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Панель аутентификации */
         #auth-panel {
-            background: #1e2432dd; backdrop-filter: blur(8px);
-            padding: 30px; border-radius: 24px; text-align: center;
-            max-width: 400px; margin: 0 auto; border: 1px solid #3e4a6b;
+            background: rgba(30, 36, 50, 0.9);
+            backdrop-filter: blur(12px);
+            padding: 32px 24px;
+            border-radius: 32px;
+            text-align: center;
+            max-width: 400px;
+            margin: auto;
+            border: 1px solid rgba(108, 158, 255, 0.3);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
         }
         .light-theme #auth-panel {
-            background: #ffffffee; border-color: #ccc; color: #1a1e2c;
+            background: rgba(255,255,255,0.9);
+            border-color: rgba(0,0,0,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
         }
         .tab-btn {
-            background: none; border: none; color: #8a9bb5;
-            font-size: 18px; padding: 10px 20px; cursor: pointer;
-            border-bottom: 3px solid transparent;
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #8a9bb5;
+            font-size: 18px;
+            font-weight: 600;
+            padding: 10px;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.2s;
         }
-        .light-theme .tab-btn { color: #4a5a7a; }
-        .tab-btn.active { color: #6c9eff; border-bottom-color: #6c9eff; }
+        .light-theme .tab-btn { color: #5a6a8a; }
+        .tab-btn.active {
+            background: #6c9eff;
+            color: white;
+        }
         .input-field {
-            padding: 12px; font-size: 16px; border-radius: 8px;
-            border: none; background: #2a3348; color: white;
-            margin: 10px 0; width: 100%;
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 16px;
+            border-radius: 16px;
+            border: none;
+            background: #1e2432;
+            color: white;
+            margin-bottom: 12px;
+            outline: 2px solid transparent;
+            transition: outline 0.2s;
         }
         .light-theme .input-field {
-            background: #e0e5f0; color: #1a1e2c;
+            background: #e9ecf0;
+            color: #1a1e2c;
+        }
+        .input-field:focus {
+            outline: 2px solid #6c9eff;
         }
         .btn {
-            padding: 12px 24px; background: #6c9eff; border: none;
-            border-radius: 8px; color: white; font-weight: bold;
-            cursor: pointer; margin: 5px;
+            padding: 14px 24px;
+            background: #6c9eff;
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            margin-top: 8px;
         }
-        #game-panel { display: none; }
+        .btn:hover {
+            background: #5a8af0;
+            transform: translateY(-2px);
+        }
+        .btn.secondary {
+            background: #3e4e6e;
+        }
+        #auth-error {
+            color: #ff7b7b;
+            margin-top: 12px;
+            min-height: 24px;
+        }
+
+        /* Игровая панель */
+        #game-panel {
+            display: none;
+            flex: 1;
+            height: 100%;
+        }
         .game-layout {
-            display: flex; gap: 15px; align-items: stretch;
-            height: calc(100vh - 20px); min-height: 600px;
+            display: flex;
+            gap: 16px;
+            height: 100%;
         }
+
+        /* Левая панель (чат) */
         .left-panel {
-            width: 280px; background: #1e2432dd; backdrop-filter: blur(8px);
-            border-radius: 16px; padding: 15px; display: flex; flex-direction: column;
-            border: 1px solid #3e4a6b;
+            width: 300px;
+            background: rgba(30, 36, 50, 0.8);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(108, 158, 255, 0.2);
         }
         .light-theme .left-panel {
-            background: #ffffffee; border-color: #ccc; color: #1a1e2c;
+            background: rgba(255,255,255,0.8);
+            border-color: rgba(0,0,0,0.1);
         }
-        .online-box {
-            background: #2a3348; border-radius: 12px; padding: 10px;
-            margin-bottom: 10px; display: flex; justify-content: space-between;
+        .panel-header {
+            display: flex;
             align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
         }
-        .light-theme .online-box { background: #e0e5f0; }
+        .online-badge {
+            background: #2a3348;
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .light-theme .online-badge {
+            background: #e0e5f0;
+        }
+        .icon-btn {
+            background: #2a3348;
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .light-theme .icon-btn {
+            background: #e0e5f0;
+            color: #1a1e2c;
+        }
+        .icon-btn:hover {
+            background: #3e4e6e;
+        }
         .chat-messages {
-            flex: 1; overflow-y: auto; background: #151a24; border-radius: 12px;
-            padding: 10px; margin-bottom: 10px; font-size: 14px;
+            flex: 1;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            backdrop-filter: blur(4px);
         }
-        .light-theme .chat-messages { background: #f8f9fc; }
-        .chat-message { margin-bottom: 5px; word-break: break-word; }
-        .chat-input-container { display: flex; gap: 5px; }
+        .light-theme .chat-messages {
+            background: rgba(0,0,0,0.05);
+        }
+        .chat-message {
+            margin-bottom: 6px;
+            word-break: break-word;
+            line-height: 1.4;
+        }
+        .chat-message b {
+            color: #6c9eff;
+        }
+        .chat-input-container {
+            display: flex;
+            gap: 8px;
+        }
         .chat-input {
-            flex: 1; padding: 10px; border-radius: 20px; border: none;
-            background: #2a3348; color: white;
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 20px;
+            border: none;
+            background: #1e2432;
+            color: white;
+            font-size: 14px;
         }
-        .light-theme .chat-input { background: #e0e5f0; color: #1a1e2c; }
-        .center-panel { flex: 1; display: flex; flex-direction: column; align-items: center; }
+        .light-theme .chat-input {
+            background: #e9ecf0;
+            color: #1a1e2c;
+        }
+        #command-hints {
+            background: #2a3348dd;
+            border-radius: 12px;
+            padding: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            display: none;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .hint-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+        .hint-item:hover {
+            background: #4a5a7a;
+        }
+
+        /* Центральная панель (холст) */
+        .center-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+        }
         .canvas-container {
-            background: #1e2432; padding: 10px; border-radius: 20px;
-            box-shadow: 0 0 20px #00000050; border: 1px solid #3e4a6b;
+            background: #1e2432;
+            padding: 12px;
+            border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid rgba(108, 158, 255, 0.3);
             position: relative;
+            max-width: 100%;
         }
-        .light-theme .canvas-container { background: #ddd; }
-        canvas { display: block; background: white; border-radius: 12px; width: 100%; height: auto; cursor: none; }
+        .light-theme .canvas-container {
+            background: #ddd;
+        }
+        canvas {
+            display: block;
+            background: white;
+            border-radius: 16px;
+            width: 100%;
+            height: auto;
+            cursor: none;
+            touch-action: none;
+        }
         #preview-canvas {
-            position: absolute; top: 10px; left: 10px;
+            position: absolute;
+            top: 12px;
+            left: 12px;
             pointer-events: none;
         }
         .cooldown-bar {
-            margin-top: 10px; width: 100%; height: 8px; background: #2a3348;
-            border-radius: 4px; overflow: hidden;
+            margin-top: 16px;
+            width: 100%;
+            height: 8px;
+            background: #2a3348;
+            border-radius: 4px;
+            overflow: hidden;
         }
-        .light-theme .cooldown-bar { background: #ccc; }
-        .cooldown-fill { height: 100%; width: 100%; background: #6c9eff; transition: width 0.1s; }
+        .cooldown-fill {
+            height: 100%;
+            width: 100%;
+            background: #6c9eff;
+            transition: width 0.1s linear;
+        }
+        #status-msg {
+            color: #ff7b7b;
+            font-size: 14px;
+            margin-top: 8px;
+            min-height: 20px;
+        }
+        #admin-indicator {
+            margin-left: 8px;
+            font-size: 18px;
+        }
+
+        /* Правая панель (палитра) */
         .right-panel {
-            width: 220px; background: #1e2432dd; backdrop-filter: blur(8px);
-            border-radius: 16px; padding: 15px; border: 1px solid #3e4a6b;
+            width: 220px;
+            background: rgba(30, 36, 50, 0.8);
+            backdrop-filter: blur(12px);
+            border-radius: 24px;
+            padding: 16px;
+            border: 1px solid rgba(108, 158, 255, 0.2);
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
         }
-        .light-theme .right-panel { background: #ffffffee; border-color: #ccc; }
-        .color-palette { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .light-theme .right-panel {
+            background: rgba(255,255,255,0.8);
+            border-color: rgba(0,0,0,0.1);
+        }
+        .right-panel h4 {
+            margin-bottom: 12px;
+            text-align: center;
+            font-weight: 600;
+        }
+        .color-palette {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
         .color-swatch {
-            aspect-ratio: 1; border-radius: 8px; border: 2px solid #4a5a7a;
-            cursor: pointer; transition: transform 0.1s;
+            aspect-ratio: 1;
+            border-radius: 12px;
+            border: 2px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            transition: all 0.15s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
         }
-        .color-swatch:hover { transform: scale(1.1); border-color: white; }
-        .color-swatch.selected { border: 3px solid white; box-shadow: 0 0 10px #6c9eff; }
-        #logout-btn { background: #4a5a7a; width: 100%; margin-top: 10px; }
-        #toggle-chat-btn { background: #3e4e6e; padding: 5px 10px; font-size: 12px; }
-        #status-msg { color: #ff7b7b; font-size: 13px; margin-top: 5px; }
-        #admin-indicator { color: #f1c40f; margin-left: 10px; font-weight: bold; }
-        #command-hints {
-            background: #2a3348dd; border-radius: 8px; padding: 8px;
-            max-height: 150px; overflow-y: auto; font-size: 13px;
-            margin-bottom: 5px; display: none;
+        .color-swatch:hover {
+            transform: scale(1.1);
+            border-color: white;
         }
-        .light-theme #command-hints { background: #e0e5f0dd; }
-        .hint-item { padding: 4px 8px; cursor: pointer; border-radius: 4px; }
-        .hint-item:hover { background: #4a5a7a; }
-        #settings-btn { background: #3e4e6e; padding: 5px 10px; font-size: 12px; }
+        .color-swatch.selected {
+            border: 3px solid white;
+            box-shadow: 0 0 15px #6c9eff;
+        }
+        .selected-color-preview {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            border-radius: 8px;
+            background: #ff0000;
+            margin-left: 8px;
+            vertical-align: middle;
+            border: 2px solid white;
+        }
+
+        /* Адаптация под мобильные */
         @media (max-width: 800px) {
-            .game-layout { flex-direction: column; height: auto; }
-            .left-panel, .right-panel { width: 100%; }
+            #app { padding: 8px; height: auto; min-height: 100vh; }
+            .game-layout {
+                flex-direction: column;
+                height: auto;
+            }
+            .left-panel, .right-panel {
+                width: 100%;
+                max-height: 300px;
+            }
+            .center-panel {
+                order: -1;
+            }
+            .canvas-container {
+                padding: 8px;
+            }
+        }
+        @media (max-width: 480px) {
+            .panel-header {
+                flex-wrap: wrap;
+            }
+            .chat-messages {
+                max-height: 150px;
+            }
         }
     </style>
     <script src="/socket.io/socket.io.js"></script>
@@ -130,37 +382,42 @@
 <body>
 <div id="app">
     <div id="auth-panel">
-        <div>
+        <div class="tabs">
             <button class="tab-btn active" data-tab="login">Вход</button>
             <button class="tab-btn" data-tab="register">Регистрация</button>
         </div>
         <div id="login-form">
-            <input type="text" id="login-nickname" class="input-field" placeholder="Логин" maxlength="15">
-            <input type="password" id="login-password" class="input-field" placeholder="Пароль">
+            <input type="text" id="login-nickname" class="input-field" placeholder="Логин" maxlength="15" autocomplete="off">
+            <input type="password" id="login-password" class="input-field" placeholder="Пароль" autocomplete="off">
             <button class="btn" id="login-btn">Войти</button>
         </div>
         <div id="register-form" style="display:none;">
-            <input type="text" id="reg-nickname" class="input-field" placeholder="Логин" maxlength="15">
-            <input type="password" id="reg-password" class="input-field" placeholder="Пароль">
+            <input type="text" id="reg-nickname" class="input-field" placeholder="Логин" maxlength="15" autocomplete="off">
+            <input type="password" id="reg-password" class="input-field" placeholder="Пароль" autocomplete="off">
             <button class="btn" id="register-btn">Зарегистрироваться</button>
         </div>
-        <div id="auth-error" style="color:#ff7b7b; margin-top:10px;"></div>
+        <div id="auth-error"></div>
     </div>
 
     <div id="game-panel">
         <div class="game-layout">
-            <div class="left-panel" id="chat-panel">
-                <div class="online-box">
-                    <span>👥 <span id="online-count">0</span></span>
-                    <button class="btn" id="toggle-chat-btn">📌 Скрыть чат</button>
-                    <button class="btn" id="settings-btn">⚙️</button>
-                    <button class="btn" id="logout-btn" style="padding:6px;">🚪 Выйти</button>
+            <div class="left-panel">
+                <div class="panel-header">
+                    <div class="online-badge">
+                        <span>👥</span>
+                        <span id="online-count">0</span>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="icon-btn" id="toggle-chat-btn" title="Скрыть чат">💬</button>
+                        <button class="icon-btn" id="settings-btn" title="Сменить тему">🌓</button>
+                        <button class="icon-btn" id="logout-btn" title="Выйти">🚪</button>
+                    </div>
                 </div>
                 <div class="chat-messages" id="chat-messages"></div>
                 <div id="command-hints"></div>
                 <div class="chat-input-container">
-                    <input type="text" class="chat-input" id="chat-input" placeholder="Сообщение или /команда" maxlength="200">
-                    <button class="btn" id="send-chat-btn">➤</button>
+                    <input type="text" class="chat-input" id="chat-input" placeholder="Сообщение или /команда" maxlength="200" autocomplete="off">
+                    <button class="icon-btn" id="send-chat-btn" style="width: 48px;">➤</button>
                 </div>
             </div>
 
@@ -169,16 +426,21 @@
                     <canvas id="canvas" width="800" height="600"></canvas>
                     <canvas id="preview-canvas" width="800" height="600"></canvas>
                 </div>
-                <div class="cooldown-bar"><div class="cooldown-fill" id="cooldown-fill"></div></div>
+                <div class="cooldown-bar">
+                    <div class="cooldown-fill" id="cooldown-fill"></div>
+                </div>
                 <div id="status-msg"></div>
                 <div id="admin-indicator"></div>
             </div>
 
             <div class="right-panel">
-                <h4>🎨 Цвета</h4>
+                <h4>🎨 Палитра</h4>
                 <div class="color-palette" id="color-palette"></div>
-                <div>Выбран: <span id="selected-color-preview" style="display:inline-block; width:20px; height:20px; border-radius:4px; background:#ff0000;"></span></div>
-                <p style="font-size:12px;">Клик — поставить пиксель</p>
+                <div style="margin-top: 16px; display: flex; align-items: center; justify-content: center;">
+                    <span>Выбран:</span>
+                    <span id="selected-color-preview" class="selected-color-preview"></span>
+                </div>
+                <p style="font-size:12px; opacity:0.7; text-align:center; margin-top:12px;">Клик — поставить пиксель</p>
             </div>
         </div>
     </div>
@@ -186,7 +448,7 @@
 
 <script>
     (function(){
-        // DOM
+        // DOM элементы
         const authPanel = document.getElementById('auth-panel');
         const gamePanel = document.getElementById('game-panel');
         const canvas = document.getElementById('canvas');
@@ -227,11 +489,10 @@
         let chatHidden = false;
         let darkTheme = true;
 
-        // Команды (админские видны только админу)
         const publicCommands = ['/help'];
         const adminCommands = ['/cooldown', '/ban', '/unban', '/clear', '/kick', '/op'];
 
-        // Палитра (32 цвета)
+        // Палитра
         const colors = ['#ffffff','#c0c0c0','#808080','#000000','#ff0000','#800000','#ffff00','#808000','#00ff00','#008000','#00ffff','#008080','#0000ff','#000080','#ff00ff','#800080','#ffa500','#ffc0cb','#a52a2a','#f5f5dc','#e6e6fa','#d3d3d3','#98fb98','#ffb6c1','#ffd700','#cd853f','#4b0082','#2e8b57','#dc143c','#1e90ff','#32cd32','#ff69b4'];
         colors.forEach(c => {
             const s = document.createElement('div'); s.className = 'color-swatch'; s.style.backgroundColor = c;
@@ -240,10 +501,10 @@
             colorPalette.appendChild(s);
         });
 
-        // Звук установки (короткий щелчок)
+        // Звук
         const placeSound = new Audio('data:audio/wav;base64,UklGRlwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVoAAACAgICAf39/f3//AAAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//w==');
 
-        // Предпросмотр с чёрной обводкой
+        // Предпросмотр с обводкой
         let mouseGridX = -1, mouseGridY = -1;
         function updatePreview(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
@@ -272,9 +533,9 @@
         }
         canvas.addEventListener('mousemove', (e) => updatePreview(e.clientX, e.clientY));
         canvas.addEventListener('mouseleave', () => { mouseGridX = mouseGridY = -1; drawPreview(); });
-        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); const touch = e.touches[0]; updatePreview(touch.clientX, touch.clientY); });
-        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); const touch = e.touches[0]; updatePreview(touch.clientX, touch.clientY); });
-        canvas.addEventListener('touchend', () => { mouseGridX = mouseGridY = -1; drawPreview(); });
+        canvas.addEventListener('touchmove', (e) => { e.preventDefault(); const touch = e.touches[0]; updatePreview(touch.clientX, touch.clientY); }, {passive: false});
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); const touch = e.touches[0]; updatePreview(touch.clientX, touch.clientY); }, {passive: false});
+        canvas.addEventListener('touchend', (e) => { e.preventDefault(); mouseGridX = mouseGridY = -1; drawPreview(); });
 
         // Тема
         function setTheme(dark) {
@@ -295,6 +556,7 @@
             tabBtns.forEach(t => t.classList.remove('active')); b.classList.add('active');
             loginForm.style.display = b.dataset.tab === 'login' ? 'block' : 'none';
             registerForm.style.display = b.dataset.tab === 'register' ? 'block' : 'none';
+            authError.textContent = '';
         }));
 
         registerBtn.addEventListener('click', () => {
@@ -403,20 +665,21 @@
             update();
         }
 
-        // Скрытие чата
         toggleChatBtn.addEventListener('click', () => {
             chatHidden = !chatHidden;
             document.querySelector('.chat-messages').style.display = chatHidden ? 'none' : 'block';
             document.querySelector('.chat-input-container').style.display = chatHidden ? 'none' : 'flex';
             commandHints.style.display = 'none';
-            toggleChatBtn.textContent = chatHidden ? '📌 Показать чат' : '📌 Скрыть чат';
+            toggleChatBtn.textContent = chatHidden ? '💬' : '💬';
+            toggleChatBtn.style.opacity = chatHidden ? '0.6' : '1';
         });
 
         logoutBtn.addEventListener('click', logout);
         function logout() {
             localStorage.removeItem('pixelbattle_nick');
             if (socket) socket.disconnect(); socket = null;
-            currentNick = null; authPanel.style.display = 'block'; gamePanel.style.display = 'none';
+            currentNick = null; authPanel.style.display = 'flex'; gamePanel.style.display = 'none';
+            authPanel.style.display = 'block';
         }
         window.addEventListener('beforeunload', () => socket?.disconnect());
     })();

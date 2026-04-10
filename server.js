@@ -133,6 +133,7 @@ io.on('connection', (socket) => {
         if (gridX < 0 || gridX >= canvas.length || gridY < 0 || gridY >= canvas[0].length)
             return callback({ ok: false, msg: 'За пределами холста' });
 
+        // Проверка: если пиксель уже такого цвета, не тратим попытку
         if (canvas[gridX][gridY] === color) {
             return callback({ ok: false, msg: 'Здесь уже такой цвет' });
         }
