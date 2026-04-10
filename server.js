@@ -91,7 +91,6 @@ io.on('connection', (socket) => {
         callback({ ok: true, canvas, online: getOnlineList(), cooldown: globalCooldown });
         io.emit('online update', getOnlineList());
         io.emit('chat message', { sender: '📢', text: `${nickname} присоединился` });
-        console.log(`>> ${nickname}`);
     });
 
     socket.on('auto login', (nickname, callback) => {
@@ -133,7 +132,7 @@ io.on('connection', (socket) => {
         if (gridX < 0 || gridX >= canvas.length || gridY < 0 || gridY >= canvas[0].length)
             return callback({ ok: false, msg: 'За пределами холста' });
 
-        // Проверка: если пиксель уже такого цвета, не тратим попытку
+        // Проверка на одинаковый цвет (не тратим попытку)
         if (canvas[gridX][gridY] === color) {
             return callback({ ok: false, msg: 'Здесь уже такой цвет' });
         }
@@ -204,7 +203,6 @@ io.on('connection', (socket) => {
             players.delete(socket.id);
             io.emit('online update', getOnlineList());
             io.emit('chat message', { sender: '📢', text: `${player.nickname} вышел` });
-            console.log(`-- ${player.nickname}`);
         }
     });
 });
